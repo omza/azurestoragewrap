@@ -13,6 +13,10 @@ from azurestoragewrap.encryption import (
     KeyResolver    
     )
 
+""" logging """
+import logging
+log = logging.getLogger('azurestoragewrap')
+
 """ model base classes """
 class StorageTableModel(object):
     _tablename = ''

@@ -2,10 +2,9 @@
 from azure.common import AzureMissingResourceHttpError, AzureException
 from azure.storage.queue import QueueService, QueueMessage
 
-
-
 import datetime
 from ast import literal_eval
+
 
 """ helpers """
 from azurestoragewrap.snippets import safe_cast
@@ -15,6 +14,11 @@ from azurestoragewrap.encryption import (
     KeyWrapper,
     KeyResolver    
     )
+
+""" logging """
+import logging
+log = logging.getLogger('azurestoragewrap')
+
 
 """ model base classes """
 class StorageQueueModel(QueueMessage):
