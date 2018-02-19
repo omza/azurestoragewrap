@@ -16,7 +16,7 @@ log = logging.getLogger('azurestoragewrap')
 
 
 """ Import application azurestoragewrap.table """        
-from azurestoragewrap.table import StorageTableModel, StorageTableContext
+from azurestoragewrap.table import StorageTableModel, StorageTableContext, StorageTableQuery
 
 """ define table test models """
 class TableOne(StorageTableModel):
@@ -57,7 +57,25 @@ class TableTwo(StorageTableModel):
         else:
             return False
 
+class TableThree(StorageTableModel):
+    Id = 0
+    Id2 = ''
+    OneToN = StorageTableQuery()
 
+    def __setPartitionKey__(self):
+        self.PartitionKey = self.Id
+        return super().__setPartitionKey__()
+
+    def __setRowKey__(self):
+        self.RowKey = self.Id2
+        return super().__setRowKey__()
+
+    def __setRelationships__(self):
+        """ parse storage primaries from instance attribute 
+            overwrite if inherit this class
+        """
+        self.OneToN = StorageTableQuery(TableTwo(), pkfilter='eq ' + self.Id2)
+        return super().__setRowKey__()
 
 
 """ Testcases positiv"""
@@ -80,14 +98,28 @@ class TestStorageTablePositive(object):
         assert not testentry._exists 
         assert db.exists(testentry) == False
 
-    def test_write_entry(self):
+    def test_insert_entry(self):
         db = StorageTableContext(**testconfig)
         db.register_model(TableOne())
-        testentity = TableOne(Id=1, Id2 ='test_write_entry')
+        testentity = TableOne(Id=1, Id2 ='test_insert_entry')
         testentity = db.insert(testentity)
         assert testentity._exists 
         assert db.exists(testentity)
         db.delete(testentity)
+
+    def test_merge_entity(self):
+        db = StorageTableContext(**testconfig)
+        db.register_model(TableTwo())
+
+        writeentity = TableTwo(Id=1, Id2 ='test_partly_encryption', Secret='Secret', NonSecret='')
+        writeentity = db.insert(writeentity)
+        assert db.exists(writeentity)
+
+        mergeentity = TableTwo(Id=1, Id2 ='test_partly_encryption', Secret='', NonSecret='NonSecret')
+        mergeentity = db.merge(mergeentity)
+        assert mergeentity.Secret == 'Secret' and mergeentity.NonSecret == 'NonSecret'
+       
+        db.delete(mergeentity)
 
     def test_partly_encryption(self):
         db = StorageTableContext(**testconfig)
@@ -101,6 +133,49 @@ class TestStorageTablePositive(object):
         assert readentity.Secret == 'Secret'  and readentity.NonSecret == 'NonSecret'
        
         db.delete(readentity)
+
+    def test_relationship(self):
+        db = StorageTableContext(**testconfig)
+        db.register_model(TableTwo())
+        db.register_model(TableThree())
+
+        for x in range(1,10):
+            db.insert(TableTwo(Id='First', Id2 = x, Secret='Secret', NonSecret='NonSecret'))
+        for x in range(1,10):
+            db.insert(TableTwo(Id='Second', Id2 = x, Secret='Secret', NonSecret='NonSecret'))
+
+        entity = TableThree(Id=1, Id2='Second')
+        db.insert(entity)
+        entity.OneToN = db.query(entity.OneToN)
+        assert len(entity.OneToN) == 10
+
+
+
+
+
+""" Housekeeping """
+class TestStorageTableHousekeeping(object):
+
+    def test_delete_tables(self):
+        db = StorageTableContext(**testconfig)
+        modeldef = TableOne()
+        db.register_model(modeldef)
+        db.unregister_model(modeldef)
+        assert not 'TableOne' in [model['modelname'] for model in db._modeldefinitions]
+
+        db.register_model(modeldef)
+        db.unregister_model(modeldef, delete_table=True)
+        assert not 'TableOne' in [model['modelname'] for model in db._modeldefinitions]
+
+        modeldef = TableTwo()
+        db.register_model(modeldef)
+        db.unregister_model(modeldef, None, True)
+        assert not 'TableTwo' in [model['modelname'] for model in db._modeldefinitions]
+
+        modeldef = TableThree()
+        db.register_model(modeldef)
+        db.unregister_model(modeldef, None, True)
+        assert not 'TableThree' in [model['modelname'] for model in db._modeldefinitions]
 
 
 
