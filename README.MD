@@ -1,16 +1,16 @@
 # azurestoragewrap
 
-One Paragraph of project description goes here
+> A Python Wrapper for modeling client side encrypted azure storage tables, queues and blobs
 
-## Installing
+## Getting started
 
 Get azurestoragewrap via pip
 
 ```
-Give the example
+pip install azurestoragewrap
 ```
 
-## Usage
+## Usage examples
 
 Explain how to run the automated tests for this system
 
@@ -38,8 +38,8 @@ Explain what these tests test and why
 Give an example
 ```
 
-## Author
+## Meta
 
-* **Billie Thompson** - *Initial work* - [PurpleBooth](https://github.com/PurpleBooth)
+* **Oliver Meyer** - *app workshop UG (haftungsbeschränkt)* - [omza on github](https://github.com/omza)
 
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details
