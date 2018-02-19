@@ -3,8 +3,11 @@
 > A Python Wrapper for modeling client side encrypted azure storage tables, queues and blobs
 
 Microsoft Azure Storage is a Microsoft-managed cloud service that provides storage that is highly available, secure, durable, scalable, and redundant. Azure Storage consists of Blob storage, Table Storage, and Queue storage. 
+
 Azure Table storage stores large amounts of structured data. The service is a NoSQL datastore which accepts authenticated calls from inside and outside the Azure cloud. Azure tables are ideal for storing structured, non-relational data.
+
 Azure Blob storage is a service for storing large amounts of unstructured object data, such as text or binary data, that can be accessed from anywhere in the world via HTTP or HTTPS (Serving images or documents directly to a browser).
+
 Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously - that can be accessed from anywhere in the world via authenticated calls using HTTP or HTTPS.
 
 ## Getting started
