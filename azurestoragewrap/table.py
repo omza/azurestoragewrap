@@ -188,7 +188,7 @@ class StorageTableQuery(list):
         self._queryfilter = ''
         
         """ determine query filter """
-        if self._pkcondition != '' and _pkforeignkey !='':
+        if self._pkcondition != '' and self._pkforeignkey !='':
             self._queryfilter = "PartitionKey {!s} '{!s}'".format(self._pkcondition, self._pkforeignkey)
 
         if self._rkcondition != '' and self._rkforeignkey !='':
@@ -205,7 +205,7 @@ class StorageTableQuery(list):
         """
         pass
 
-    def filter(self, key, values):
+    def filter(self, key, values) -> list:
         resultset = [item for item in self if item[key] in values]
         self.clear()
         self.extend(resultset)

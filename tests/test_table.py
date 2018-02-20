@@ -34,7 +34,7 @@ class TableOne(StorageTableModel):
 class TableTwo(StorageTableModel):
     _encrypt = True
 
-    Id = 0
+    Id = ''
     Id2 = ''
     Secret = ''
     NonSecret = ''
@@ -60,7 +60,7 @@ class TableTwo(StorageTableModel):
 class TableThree(StorageTableModel):
     Id = 0
     Id2 = ''
-    OneToN = StorageTableQuery()
+    OneToN = StorageTableQuery(TableTwo(), pkcondition='eq', pkforeignkey='Id2')
 
     def __setPartitionKey__(self):
         self.PartitionKey = self.Id
@@ -68,13 +68,6 @@ class TableThree(StorageTableModel):
 
     def __setRowKey__(self):
         self.RowKey = self.Id2
-        return super().__setRowKey__()
-
-    def __setRelationships__(self):
-        """ parse storage primaries from instance attribute 
-            overwrite if inherit this class
-        """
-        self.OneToN = StorageTableQuery(TableTwo(), pkfilter='eq ' + self.Id2)
         return super().__setRowKey__()
 
 
@@ -139,9 +132,9 @@ class TestStorageTablePositive(object):
         db.register_model(TableTwo())
         db.register_model(TableThree())
 
-        for x in range(1,10):
+        for x in range(1,11):
             db.insert(TableTwo(Id='First', Id2 = x, Secret='Secret', NonSecret='NonSecret'))
-        for x in range(1,10):
+        for x in range(1,11):
             db.insert(TableTwo(Id='Second', Id2 = x, Secret='Secret', NonSecret='NonSecret'))
 
         entity = TableThree(Id=1, Id2='Second')

@@ -1,9 +1,11 @@
 """ imports & globals """
 from azure.common import AzureMissingResourceHttpError, AzureException
+from azure.storage import CloudStorageAccount
 from azure.storage.queue import QueueService, QueueMessage
 
 import datetime
 from ast import literal_eval
+from functools import wraps
 
 
 """ helpers """
@@ -29,7 +31,10 @@ class StorageQueueModel(QueueMessage):
     def __init__(self, **kwargs):                  
         """ constructor """
         super().__init__()
-        self._queuename = self.__class__._queuename
+        if self.__class__._queuename == '':
+            self._queuename = self.__class__.__name__.lower()
+        else:
+            self._queuename = self.__class__._queuename
         self._dateformat = self.__class__._dateformat
         self._datetimeformat = self.__class__._datetimeformat
                
@@ -40,9 +45,7 @@ class StorageQueueModel(QueueMessage):
                     if key in kwargs:                   
                         value = kwargs.get(key)
                         to_type = type(default)              
-                        if to_type is StorageTableCollection:
-                            setattr(self, key, value)
-                        elif to_type is datetime.datetime:
+                        if to_type is datetime.datetime:
                             setattr(self, key, safe_cast(value, to_type, default, self._datetimeformat))
                         elif to_type is datetime.date:
                             setattr(self, key, safe_cast(value, to_type, default, self._dateformat))
@@ -82,31 +85,81 @@ class StorageQueueContext():
         Required settings in config dict are:
         - AZURE_STORAGE_NAME
         - AZURE_STORAGE_KEY
+        - AZURE_REQUIRE_ENCRYPTION
+        - AZURE_KEY_IDENTIFIER
+        - AZURE_SECRET_KEY
+        - AZURE_STORAGE_IS_EMULATED
     """
-    
+
+    _account = None
+    _account_name = ''
+    _account_key = ''
+    _is_emulated = False
+    _encrypt = False  
     _models = []
     _service = None
-    _storage_key = ''
-    _storage_name = ''
+    REGISTERED = True
+
+    """ decorators """
+    def get_modeldefinition(registered=False):
+        def wrap(func):
+            @wraps(func)
+            def wrapper(self, storagemodel, *args, **kwargs):
+            
+                """ find modeldefinition for StorageQueueModel or StorageQueueModel """
+                if isinstance(storagemodel, StorageQueueModel):
+     
+                    if registered:
+                        modelname = storagemodel.__class__.__name__
+                        if modelname in self._models:
+                            return func(self, storagemodel, *args, **kwargs)
+                        else:
+                            log.info('please register model {} first'.format(modelname))
+                            raise Exception("Please register Model first")
+                    else:
+                        return func(self, storagemodel, *args, **kwargs)                
+                    
+                else:
+                    log.info('Argument is not an StorageQueueModel')
+                    raise Exception("Argument is not an StorageQueueModel")
+
+            return wrapper
+        return wrap
+
 
     def __init__(self, **kwargs):
 
-        self._storage_name = kwargs.get('AZURE_STORAGE_NAME', '')
-        self._storage_key = kwargs.get('AZURE_STORAGE_KEY', '')
+        """ parse kwargs """
+        self._account_name = kwargs.get('AZURE_STORAGE_NAME', '')
+        self._account_key = kwargs.get('AZURE_STORAGE_KEY', '')
+        self._is_emulated = kwargs.get('AZURE_STORAGE_IS_EMULATED', False)
+        self._key_identifier = kwargs.get('AZURE_KEY_IDENTIFIER', '')
+        self._secret_key = kwargs.get('AZURE_SECRET_KEY', '')
+        self._encrypt = kwargs.get('AZURE_REQUIRE_ENCRYPTION', False)
 
-        """ service init """
-        if self._storage_key != '' and self._storage_name != '':
-            self._service = QueueService(account_name = self._storage_name, account_key = self._storage_key, protocol='https')
+        """ account & service init """
+        if self._is_emulated:
+            self._account = CloudStorageAccount(is_emulated=True)
+            self._service = self._account.create_queue_service()
+
+        elif self._account_name != '' and self._account_key != '':
+            self._account = CloudStorageAccount(self._account_name, self._account_key, protocol='https')
+            self._service = self._account.create_queue_service()
+
+        else:
+            raise AzureException
+
 
         """ registered models """
         self._models = []
 
+
         """ encrypt queue service """
-        if kwargs.get('AZURE_REQUIRE_ENCRYPTION', False):
+        if self._encrypt:
 
             # Create the KEK used for encryption.
             # KeyWrapper is the provided sample implementation, but the user may use their own object as long as it implements the interface above.
-            kek = KeyWrapper(kwargs.get('AZURE_KEY_IDENTIFIER', 'otrrentapi'), kwargs.get('SECRET_KEY', 'super-duper-secret')) # Key identifier
+            kek = KeyWrapper(self._key_identifier, self._secret_key) #  Key identifier
 
             # Create the key resolver used for decryption.
             # KeyResolver is the provided sample implementation, but the user may use whatever implementation they choose so long as the function set on the service object behaves appropriately.
@@ -118,7 +171,7 @@ class StorageQueueContext():
             self._service.key_encryption_key = kek
             self._service.key_resolver_funcion = key_resolver.resolve_key
         pass
-     
+ 
     def __create__(self, queue) -> bool:
         if (not self._service is None):
             try:
@@ -131,147 +184,108 @@ class StorageQueueContext():
             return True
         pass
 
+
+    @get_modeldefinition()
     def register_model(self, storagemodel:object):
-        modelname = storagemodel.__class__.__name__     
-        if isinstance(storagemodel, StorageQueueModel):
-            if (not modelname in self._models):
-                self.__create__(storagemodel._queuename)
-                self._models.append(modelname)
-                log.info('model {} registered successfully. Models are {!s}'.format(modelname, self._models))      
+        modelname = storagemodel.__class__.__name__
+        if (not modelname in self._models):
+            self.__create__(storagemodel._queuename)
+            self._models.append(modelname)
+            log.info('model {} registered successfully. Models are {!s}'.format(modelname, self._models))      
         pass
 
+    @get_modeldefinition(REGISTERED)
     def put(self, storagemodel:object) -> StorageQueueModel:
         """ insert queue message into storage """
+        try:
+            message = self._service.put_message(storagemodel._queuename, storagemodel.getmessage())
+            storagemodel.mergemessage(message)
 
-        modelname = storagemodel.__class__.__name__
-        if isinstance(storagemodel, StorageQueueModel):
-            if (modelname in self._models):
-                """ peek first message in queue """
-                try:
-                    message = self._service.put_message(storagemodel._queuename, storagemodel.getmessage())
-                    storagemodel.mergemessage(message)
-
-                except AzureException as e:
-                    log.error('can not save queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
-                    storagemodel = None
-            else:
-                log.info('please register model {} first'.format(modelname))
-                storagemodel = None
-        else:
-            log.info('model {} is not a Queue Model'.format(modelname))
+        except AzureException as e:
+            log.error('can not save queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
             storagemodel = None
 
-        return storagemodel
+        finally:
+            return storagemodel
 
+    @get_modeldefinition(REGISTERED)
     def peek(self, storagemodel:object) -> StorageQueueModel:
         """ lookup the next message in queue """
 
-        modelname = storagemodel.__class__.__name__
-        if isinstance(storagemodel, StorageQueueModel):
-            if (modelname in self._models):
-                """ peek first message in queue """
-                try:
-                    messages = self._service.peek_messages(storagemodel._queuename, num_messages=1)
+        try:
+            messages = self._service.peek_messages(storagemodel._queuename, num_messages=1)
 
-                    """ parse retrieved message """
-                    for message in messages:
-                        storagemodel.mergemessage(message)
+            """ parse retrieved message """
+            for message in messages:
+                storagemodel.mergemessage(message)
 
-                    """ no message retrieved ?"""
-                    if storagemodel.id is None:
-                        storagemodel = None
-
-                except AzureException as e:
-                    log.error('can not peek queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
-                    storagemodel = None
-            else:
-                log.info('please register model {} first'.format(modelname))
+            """ no message retrieved ?"""
+            if storagemodel.id is None:
                 storagemodel = None
-        else:
-            log.info('model {} is not a Queue Model'.format(modelname))
+
+        except AzureException as e:
+            log.error('can not peek queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
             storagemodel = None
 
-        return storagemodel
+        finally:
+            return storagemodel
 
+    @get_modeldefinition(REGISTERED)
     def get(self, storagemodel:object, hide = 0) -> StorageQueueModel:
-        """ lookup the next message in queue """
-        modelname = storagemodel.__class__.__name__
-        if isinstance(storagemodel, StorageQueueModel):
-            if (modelname in self._models):
-                """ get first message in queue """
-                try:
-                    if hide > 0:
-                        messages = self._service.get_messages(storagemodel._queuename, num_messages=1, visibility_timeout = hide)
-                    else:
-                        messages = self._service.get_messages(storagemodel._queuename, num_messages=1)
-                    
-                    """ parse retrieved message """
-                    for message in messages:
-                        storagemodel.mergemessage(message)
-
-                    """ no message retrieved ?"""
-                    if storagemodel.id is None:
-                        storagemodel = None
-
-                except AzureException as e:
-                    log.error('can not get queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
-                    storagemodel = None
+        """ get the next message in queue """
+        try:
+            if hide > 0:
+                messages = self._service.get_messages(storagemodel._queuename, num_messages=1, visibility_timeout = hide)
             else:
-                log.info('please register model {} first'.format(modelname))
+                messages = self._service.get_messages(storagemodel._queuename, num_messages=1)
+                    
+            """ parse retrieved message """
+            for message in messages:
+                storagemodel.mergemessage(message)
+
+            """ no message retrieved ?"""
+            if storagemodel.id is None:
                 storagemodel = None
-        else:
-            log.info('model {} is not a Queue Model'.format(modelname))
+
+        except AzureException as e:
+            log.error('can not get queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
             storagemodel = None
 
-        return storagemodel
+        finally:
+            return storagemodel
 
+    @get_modeldefinition(REGISTERED)
     def update(self, storagemodel:object, hide = 0) -> StorageQueueModel:
         """ update the message in queue """
-        modelname = storagemodel.__class__.__name__
-        if isinstance(storagemodel, StorageQueueModel):
-            if (modelname in self._models):
-                """ check if message in queue """
-                if (storagemodel.id != '') and (storagemodel.pop_receipt != '') and (not storagemodel.id is None) and (not storagemodel.pop_receipt is None):
-                    try:
-                        content = storagemodel.getmessage()
-                        message = self._service.update_message(storagemodel._queuename, storagemodel.id, storagemodel.pop_receipt, visibility_timeout = hide, content=content)
-                        storagemodel.content = content
-                        storagemodel.pop_receipt = message.pop_receipt
 
-                    except AzureException as e:
-                        log.error('can not update queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e))
-                        storagemodel = None
-                else:
-                    log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modelname))
-                    storagemodel = None
-            else:
-                log.info('please register model {} first'.format(modelname))
+        if (storagemodel.id != '') and (storagemodel.pop_receipt != '') and (not storagemodel.id is None) and (not storagemodel.pop_receipt is None):
+            try:
+                content = storagemodel.getmessage()
+                message = self._service.update_message(storagemodel._queuename, storagemodel.id, storagemodel.pop_receipt, visibility_timeout = hide, content=content)
+                storagemodel.content = content
+                storagemodel.pop_receipt = message.pop_receipt
+
+            except AzureException as e:
+                log.error('can not update queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e))
                 storagemodel = None
         else:
-            log.info('model {} is not a Queue Model'.format(modelname))
+            log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modelname))
             storagemodel = None
 
         return storagemodel
 
+    @get_modeldefinition(REGISTERED)
     def delete(self, storagemodel:object) -> bool:
         """ delete the message in queue """
-        modelname = storagemodel.__class__.__name__
         deleted = False
-        if isinstance(storagemodel, StorageQueueModel):
-            if (modelname in self._models):
-                """ check if message in queue """
-                if (storagemodel.id != '') and (storagemodel.pop_receipt != '') and (not storagemodel.id is None) and (not storagemodel.pop_receipt is None):
-                    try:
-                        self._service.delete_message(storagemodel._queuename, storagemodel.id, storagemodel.pop_receipt)
-                        deleted = True
+        if (storagemodel.id != '') and (storagemodel.pop_receipt != '') and (not storagemodel.id is None) and (not storagemodel.pop_receipt is None):
+            try:
+                self._service.delete_message(storagemodel._queuename, storagemodel.id, storagemodel.pop_receipt)
+                deleted = True
 
-                    except AzureException as e:
-                        log.error('can not delete queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e))
-                else:
-                    log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modelname))
-            else:
-                log.info('please register model {} first'.format(modelname))
+            except AzureException as e:
+                log.error('can not delete queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e))
         else:
-            log.info('model {} is not a Queue Model'.format(modelname))
+            log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modelname))
 
         return deleted
