@@ -18,6 +18,9 @@ log = logging.getLogger('azurestoragewrap')
 from azurestoragewrap.queue import StorageQueueContext, StorageQueueModel
 
 
+""" imports & Globals """
+import time
+
 class QueueOne(StorageQueueModel):
 
     epgid = 0
@@ -38,16 +41,78 @@ class TestStorageQueuePositive(object):
     def test_put(self):
         queue = StorageQueueContext(**testconfig)
         queue.register_model(QueueOne())        
-        message = QueueOne(epgid = 1, resolution = 'HighDefinition')
+        message = QueueOne(epgid = 1, resolution = 'test_put')
         queue.put(message)
+        queue.delete(message)
 
     def test_peek(self):
         queue = StorageQueueContext(**testconfig)
         queue.register_model(QueueOne())        
-        message = QueueOne(epgid = 1, resolution = 'HighDefinition')
+        message = QueueOne(epgid = 1, resolution = 'test_peek')
         message = queue.put(message)
         assert not message is None
+
         firstmessage = queue.peek(QueueOne())
-        assert firstmessage.resolution == 'HighDefinition' 
+        assert firstmessage.resolution == 'test_peek'
+
+        queue.delete(message)
+        
+
+    def test_get_hide(self):
+        queue = StorageQueueContext(**testconfig)
+        queue.register_model(QueueOne())        
+        message = QueueOne(epgid = 1, resolution = 'test_get_hide')
+        queue.put(message)
+
+        getmessage = queue.get(QueueOne(), hide=10)
+        assert getmessage.epgid == 1 and getmessage.resolution == 'test_get_hide'
+
+        testmessage = queue.get(QueueOne())
+        assert testmessage is None
+
+        time.sleep(10)
+        getmessage = queue.get(QueueOne())
+        assert getmessage.epgid == 1 and getmessage.resolution == 'test_get_hide'
+        queue.delete(getmessage)
+
+
+    def test_get_nothide(self):
+        queue = StorageQueueContext(**testconfig)
+        queue.register_model(QueueOne())        
+        message = QueueOne(epgid = 1, resolution = 'test_get_nothide')
+        queue.put(message)
+
+        getmessage = queue.get(QueueOne(), hide=1)
+        assert getmessage.epgid == 1 and getmessage.resolution == 'test_get_nothide'
+
+        time.sleep(1)
+
+        testmessage = queue.get(QueueOne())
+        assert testmessage.epgid == 1 and getmessage.resolution == 'test_get_nothide'
+
+        queue.delete(testmessage)
+
+    def test_unregister_model(self):
+        queue = StorageQueueContext(**testconfig)
+        message = QueueOne() 
+        queue.register_model(message)
+        assert message.__class__.__name__ in queue._models
+
+        queue.unregister_model(message)
+        assert not message.__class__.__name__ in queue._models
+
+""" Testcases Housekeeping"""
+class TestStorageQueueHousekeeping(object):
+
+    def test_unregister_model_delete(self):
+        queue = StorageQueueContext(**testconfig)
+        message = QueueOne() 
+        queue.register_model(message)
+        assert message.__class__.__name__ in queue._models
+
+        queue.unregister_model(message, delete_queue=True)
+        assert not message.__class__.__name__ in queue._models        
+
+
 
 

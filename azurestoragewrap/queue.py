@@ -126,7 +126,6 @@ class StorageQueueContext():
             return wrapper
         return wrap
 
-
     def __init__(self, **kwargs):
 
         """ parse kwargs """
@@ -184,6 +183,17 @@ class StorageQueueContext():
             return True
         pass
 
+    def __deletequeue__(self, queue) -> bool:
+        if (not self._service is None):
+            try:
+                self._service.delete_queue(queue)
+                return True
+            except AzureException as e:
+                log.error('failed to delete {} with error {}'.format(queue, e))
+                return False
+        else:
+            return True
+        pass
 
     @get_modeldefinition()
     def register_model(self, storagemodel:object):
@@ -192,6 +202,32 @@ class StorageQueueContext():
             self.__create__(storagemodel._queuename)
             self._models.append(modelname)
             log.info('model {} registered successfully. Models are {!s}'.format(modelname, self._models))      
+        pass
+
+    @get_modeldefinition(REGISTERED)
+    def unregister_model(self, storagemodel:object, delete_queue=False):
+        """ clear up an Queueservice for an StorageQueueModel in your  Azure Storage Account
+            Will delete the hole Queue if delete_queue Flag is True!
+        
+            required Parameter is:
+            - storagemodel: StorageQueueModel(Object)
+
+            Optional Parameter is:
+            - delete_queue: bool
+        """
+        modelname = storagemodel.__class__.__name__
+        
+        """ remove from modeldefinitions """
+        for i in range(len(self._models)):
+            if self._models[i] == modelname:
+                del self._models[i]
+                break
+
+        """ delete queue from storage if delete_queue == True """        
+        if delete_queue:
+            self.__deletequeue__(storagemodel._queuename)
+
+        log.info('model {} registered successfully. Models are {!s}'.format(modelname, self._models))      
         pass
 
     @get_modeldefinition(REGISTERED)
