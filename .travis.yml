@@ -1,7 +1,21 @@
 language: python
+
 python:
+  - "3.3"
+  - "3.4"
+  - "3.5"
   - "3.6"
+
+# command to install dependencies
 install:
   - pip install -r requirements.txt
+
 script:
-  - pytest
+  - python setup.py test
+  - python setup.py sdist
+  - python setup.py bdist_wheel 
+
+deploy:
+  provider: pypi
+  user: "omza"
+  password: "m9rxGHKAYdK76HAgEoQp"
