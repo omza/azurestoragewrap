@@ -2,15 +2,11 @@
 
 > A Python Wrapper for modeling client side encrypted azure storage tables, queues and blobs
 
+Inspired by the conversion of data modeling in [SQLAlchemy](https://github.com/zzzeek/sqlalchemy) lib - What the great Job! Thank You! -, i wrote this little wrapper around the [Microsoft Azure Storage Library for Python](https://github.com/Azure/azure-storage-python) to simplify modeling data structures and easily implement Client Side Encryption for my own needs. 
+Would be lucky if this lib helps other peoples too. GitHub Issues, Stars, Forks and Contribution are Welcome! Have fun with azurestoragewrap.
+
 Microsoft Azure Storage is a Microsoft-managed cloud service that provides storage that is highly available, secure, durable, scalable, and redundant. Azure Storage consists of Blob storage, Table Storage, and Queue storage. 
-
-Azure Table storage stores large amounts of structured data. The service is a NoSQL datastore which accepts authenticated calls from inside and outside the Azure cloud. Azure tables are ideal for storing structured, non-relational data.
-
-Azure Blob storage is a service for storing large amounts of unstructured object data, such as text or binary data - e.g. to serve images or documents directly to a browser.
-
-Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously.
-
-All Data can be accessed from anywhere in the world via HTTP or HTTPS
+All Data can be accessed from anywhere in the world via HTTP or HTTPS.
 
 ## Getting started
 
@@ -45,7 +41,7 @@ config = {
 
 ### Table
 
-To handle Table Data you have to model your Table structure like this:
+Azure Table storage stores large amounts of structured data. The service is a NoSQL datastore which accepts authenticated calls from inside and outside the Azure cloud. Azure tables are ideal for storing structured, non-relational data. To handle Table Data you have to model your Table structure like this:
 ```
 # Model without encryption
 class TableOne(StorageTableModel):
@@ -121,7 +117,8 @@ mergeentity = db.merge(mergeentity)
 
 ### Queue
 
-Explain what these tests test and why
+Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously.
+
 
 ```
 Give an example
@@ -129,7 +126,8 @@ Give an example
 
 ### Blob
 
-Explain what these tests test and why
+Azure Blob storage is a service for storing large amounts of unstructured object data, such as text or binary data - e.g. to serve images or documents directly to a browser.
+
 
 ```
 Give an example
