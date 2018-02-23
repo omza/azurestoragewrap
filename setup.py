@@ -13,7 +13,7 @@ from os import path
 here = path.abspath(path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.MD'), encoding='utf-8',errors='ignore') as f:
+with open(path.join(here, 'README.md'), encoding='utf-8',errors='ignore') as f:
     README = f.read()
 
 # Arguments marked as "Required" below must be included for upload to PyPI.
