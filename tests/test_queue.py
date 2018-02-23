@@ -17,6 +17,9 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger('azurestoragewrap')
 
+log.debug('AZURE_STORAGE_NAME={!s}'.format(testconfig['AZURE_STORAGE_NAME']))
+log.debug('AZURE_STORAGE_KEY={!s}'.format(testconfig['AZURE_STORAGE_KEY']))
+
 
 """ Import application azurestoragewrap.table """        
 from azurestoragewrap.queue import StorageQueueContext, StorageQueueModel
