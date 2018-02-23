@@ -14,11 +14,8 @@ if testconfig['AZURE_STORAGE_NAME'] == '' and testconfig['AZURE_STORAGE_KEY'] ==
 
 """ logging while testing """
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('azurestoragewrap')
-
-log.debug('AZURE_STORAGE_NAME={!s}'.format(testconfig['AZURE_STORAGE_NAME']))
-log.debug('AZURE_STORAGE_KEY={!s}'.format(testconfig['AZURE_STORAGE_KEY']))
 
 
 """ Import application azurestoragewrap.table """        
