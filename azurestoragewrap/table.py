@@ -283,7 +283,7 @@ class StorageTableContext():
             self._account = CloudStorageAccount(is_emulated=True)
 
         elif self._account_name != '' and self._account_key != '':
-            self._account = CloudStorageAccount(self._account_name, self._account_key, protocol='https')
+            self._account = CloudStorageAccount(self._account_name, self._account_key)
         
         else:
             raise AzureException

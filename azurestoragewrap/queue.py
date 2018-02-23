@@ -142,7 +142,7 @@ class StorageQueueContext():
             self._service = self._account.create_queue_service()
 
         elif self._account_name != '' and self._account_key != '':
-            self._account = CloudStorageAccount(self._account_name, self._account_key, protocol='https')
+            self._account = CloudStorageAccount(self._account_name, self._account_key)
             self._service = self._account.create_queue_service()
 
         else:

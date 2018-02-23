@@ -1,13 +1,17 @@
 
-""" config for Storage Emulator """
+""" config """
+from os import environ
 testconfig = {
-    'AZURE_STORAGE_NAME': '',
-    'AZURE_STORAGE_KEY': '',
+    'AZURE_STORAGE_NAME': environ.get('AZURE_STORAGE_NAME',''),
+    'AZURE_STORAGE_KEY': environ.get('AZURE_STORAGE_KEY',''),
     'AZURE_REQUIRE_ENCRYPTION': False,
-    'AZURE_STORAGE_IS_EMULATED': True,
+    'AZURE_STORAGE_IS_EMULATED': False,
     'AZURE_KEY_IDENTIFIER': 'azurestoragewrap_test',
     'AZURE_SECRET_KEY': 'supa-dupa-secret-special-key2901'
 }
+
+if testconfig['AZURE_STORAGE_NAME'] == '' and testconfig['AZURE_STORAGE_KEY'] == '':
+    testconfig['AZURE_STORAGE_IS_EMULATED'] = True
 
 """ logging while testing """
 import logging
