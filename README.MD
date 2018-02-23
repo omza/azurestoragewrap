@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/omza/azurestoragewrap.svg?branch=master)](https://travis-ci.org/omza/azurestoragewrap)
+
 # azurestoragewrap
 
 > A Python Wrapper for modeling client side encrypted azure storage tables, queues and blobs
