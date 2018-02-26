@@ -20,36 +20,20 @@ log = logging.getLogger('azurestoragewrap')
 
 
 """ Import application azurestoragewrap.table """        
-from azurestoragewrap.table import StorageTableModel, StorageTableContext, StorageTableQuery
+from azurestoragewrap.table import StorageTableModel, StorageTableContext, StorageTableQuery, PartitionKey, RowKey, EncryptKey
 
 """ define table test models """
 class TableOne(StorageTableModel):
-    Id = 0
-    Id2 = ''
-
-    def __setPartitionKey__(self):
-        self.PartitionKey = self.Id
-        return super().__setPartitionKey__()
-
-    def __setRowKey__(self):
-        self.RowKey = self.Id2
-        return super().__setRowKey__()
+    Id = PartitionKey(0) #You have to define one Property as PartitionKey (Part of Azure Storage Table Primary Key) with a default Value
+    Id2 = RowKey('')     #You have to define one Property as RowKey (Part of Azure Storage Table Primary Key) with a default Value
 
 class TableTwo(StorageTableModel):
-    _encrypt = True
-
-    Id = ''
-    Id2 = ''
-    Secret = ''
+    Id = PartitionKey('')
+    Id2 = RowKey('')
+    Secret = EncryptKey('') # a Property you like to en-/decrypt clientside has to define as "EncryptKey" with an default Value
     NonSecret = ''
+    Secret2 = EncryptKey('second encrypt') # of cause you can mix multiple encrypted and non encrypted Properties in a Table Model
 
-    def __setPartitionKey__(self):
-        self.PartitionKey = self.Id
-        return super().__setPartitionKey__()
-
-    def __setRowKey__(self):
-        self.RowKey = self.Id2
-        return super().__setRowKey__()
 
     @staticmethod
     def __encryptionresolver__(pk, rk, property_name):
@@ -62,21 +46,20 @@ class TableTwo(StorageTableModel):
             return False
 
 class TableThree(StorageTableModel):
-    Id = 0
-    Id2 = ''
+    Id = PartitionKey(0)
+    Id2 = RowKey('')
     OneToN = StorageTableQuery(TableTwo(), pkcondition='eq', pkforeignkey='Id2')
 
-    def __setPartitionKey__(self):
-        self.PartitionKey = self.Id
-        return super().__setPartitionKey__()
 
-    def __setRowKey__(self):
-        self.RowKey = self.Id2
-        return super().__setRowKey__()
+class Table4(StorageTableModel):
+    Id = PartitionKey(0)
+    Id2 = RowKey('')
+    TableName = True
 
 
 """ Testcases positiv"""
 class TestStorageTablePositive(object):
+
 
     def test_init_StorageTableContext(self):  
         db = StorageTableContext(**testconfig)
@@ -146,6 +129,13 @@ class TestStorageTablePositive(object):
         entity.OneToN = db.query(entity.OneToN)
         assert len(entity.OneToN) == 10
 
+    def test_newtablemodel(self):
+        db = StorageTableContext(**testconfig)
+        db.register_model(Table4())
+
+        model = Table4(Id=1, Id2 ='test_newtablemodel')
+        db.insert(model)
+        assert model.TableName == True
 
 
 
@@ -175,6 +165,9 @@ class TestStorageTableHousekeeping(object):
         assert not 'TableThree' in [model['modelname'] for model in db._modeldefinitions]
 
 
-
+        modeldef = Table4()
+        db.register_model(modeldef)
+        db.unregister_model(modeldef, None, True)
+        assert not 'Table4' in [model['modelname'] for model in db._modeldefinitions]
 
 

@@ -21,16 +21,30 @@ import logging
 log = logging.getLogger('azurestoragewrap')
 
 """ model base classes """
+class PartitionKey(object):
+    def __init__(self, default):
+        self._default = default
+        self._type = type(default)
+class RowKey(object):
+    def __init__(self, default):
+        self._default = default
+        self._type = type(default)
+
+class EncryptKey(object):
+    def __init__(self, default):
+        self._default = default
+        self._type = type(default)
+
+
 class StorageTableModel(object):
     _tablename = ''
-    _encrypt = False
-
+    _encrypt = []
     _dateformat = ''
     _datetimeformat = ''
     _exists = None
 
-    PartitionKey = ''
-    RowKey = ''
+    _PartitionKey = ''
+    _RowKey = ''
 
     def __init__(self, **kwargs):                  
         """ constructor """
@@ -41,45 +55,46 @@ class StorageTableModel(object):
         self._dateformat = self.__class__._dateformat
         self._datetimeformat = self.__class__._datetimeformat
         self._exists = None
-        self._encrypt = self.__class__._encrypt
+        self._encrypt = []
+
         IncludeRelationship = []
                
         """ parse **kwargs into instance var """
-        self.PartitionKey = kwargs.get('PartitionKey', '')
-        self.RowKey = kwargs.get('RowKey', '')
-
         for key, default in vars(self.__class__).items():
             if not key.startswith('_') and key != '':
+
                 to_type = type(default)
                 
-                if (key in kwargs):       
-                    value = kwargs.get(key)
+                if to_type is PartitionKey:
+                    self._PartitionKey = key
+                    to_type = default._type
+                    default = default._default
+
+                elif to_type is RowKey:
+                    self._RowKey = key
+                    to_type = default._type
+                    default = default._default
+
+                elif to_type is EncryptKey:
+                    self._encrypt.append(key)
+                    to_type = default._type
+                    default = default._default
+
+                value = kwargs.get(key, default)
                 
-                    if to_type is StorageTableQuery:
-                        setattr(self, key, value)
-
-                    elif to_type is datetime.datetime:
-                        setattr(self, key, safe_cast(value, to_type, default, self._datetimeformat))
-
-                    elif to_type is datetime.date:
-                        setattr(self, key, safe_cast(value, to_type, default, self._dateformat))
-
-                    else:
-                        setattr(self, key, safe_cast(value, to_type, default))
-                
-                elif to_type is StorageTableQuery:
+                if to_type is StorageTableQuery:
+                    setattr(self, key, value)
                     IncludeRelationship.append({'key': key, 
-                                                'query': default})
+                                                'query': value})
+
+                elif to_type is datetime.datetime:
+                    setattr(self, key, safe_cast(value, to_type, default, self._datetimeformat))
+
+                elif to_type is datetime.date:
+                    setattr(self, key, safe_cast(value, to_type, default, self._dateformat))
 
                 else:
-                    setattr(self, key, default)
-
-        """ set primary keys from data"""
-        if self.PartitionKey == '':
-            self.__setPartitionKey__()
-
-        if self.RowKey == '':
-            self.__setRowKey__()
+                    setattr(self, key, safe_cast(value, to_type, default))
 
         """ initialize Relationship/ related Query Objects """
         for item in IncludeRelationship:
@@ -93,21 +108,6 @@ class StorageTableModel(object):
                                                  query._rkcondition,
                                                  rkwhere,
                                                  query._select))
-            pass
-
-        pass
-     
-    def __setPartitionKey__(self):
-        """ parse storage primaries from instance attribute 
-            overwrite if inherit this class
-        """
-        pass
-
-    def __setRowKey__(self):
-        """ parse storage primaries from instance attribute 
-            overwrite if inherit this class
-        """
-        pass
 
 
     # Define the encryption resolver_function.
@@ -125,24 +125,29 @@ class StorageTableModel(object):
 
         for key, value in vars(self).items():
             if not key.startswith('_') and key !='':
-                if key in ['PartitionKey', 'RowKey']:
+                """ if key in ['PartitionKey', 'RowKey']:
                     image[key] = str(value)
-                else:
-                    image[key] = value
+                else:"""
+                image[key] = value
         
         return image
 
     def entity(self) -> dict:        
         """ parse self into dictionary """    
         image = {}
+        image['PartitionKey'] = str(getattr(self, self._PartitionKey))
+        image['RowKey'] = str(getattr(self, self._RowKey))
         for key, value in vars(self).items():
             if not key.startswith('_') and key !='':
                 if type(value) in [str, int, bool, datetime.date, datetime.datetime]:
-                    if key in ['PartitionKey', 'RowKey']:
-                        image[key] = str(value)
-                    else:
-                        image[key] = value                    
+                    image[key] = value                    
         return image
+
+    def PartitionKey(self) -> str:
+        return str(getattr(self, self._PartitionKey))
+
+    def RowKey(self) -> str:
+        return str(getattr(self, self._RowKey))
 
 class StorageTableQuery(list):
     """ Initialized a query your azure storage to implement a model relationship by Partition- and/or RowKey
@@ -348,10 +353,15 @@ class StorageTableContext():
                 key_resolver = KeyResolver()
                 key_resolver.put_key(kek)
 
+                # Create the EncryptionResolver Function to determine Properties to en/decrypt
+                encryptionresolver = self.__encryptionresolver__(modeldefinition['encrypt'])
+
+
                 # Set the require Encryption, KEK and key resolver on the service object.
                 modeldefinition['tableservice'].key_encryption_key = kek
                 modeldefinition['tableservice'].key_resolver_funcion = key_resolver.resolve_key
-                modeldefinition['tableservice'].encryption_resolver_function = storagemodel.__class__.__encryptionresolver__
+                modeldefinition['tableservice'].encryption_resolver_function = encryptionresolver
+                pass
 
             self.__createtable__(modeldefinition)
                 
@@ -390,7 +400,7 @@ class StorageTableContext():
         exists = False
         if storagemodel._exists is None:
             try:
-                entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey)
+                entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey())
                 storagemodel._exists = True
                 exists = True
             
@@ -405,7 +415,7 @@ class StorageTableContext():
     def get(self, storagemodel, modeldefinition) -> StorageTableModel:
         """ load entity data from storage to vars in self """
         try:
-            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey)
+            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey())
             storagemodel._exists = True
         
             """ sync with entity values """
@@ -448,11 +458,15 @@ class StorageTableContext():
     def merge(self, storagemodel, modeldefinition) -> StorageTableModel:
         """ try to merge entry """
         try:
-            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey)
+            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey())
         
             """ merge with entity values """
             for key, default in vars(storagemodel.__class__).items():
-                if not key.startswith('_') and key not in ['','PartitionKey','RowKey']:
+                if not key.startswith('_') and key not in ['']:
+
+                    if isinstance(default, PartitionKey) or isinstance(default, RowKey) or  isinstance(default, EncryptKey):
+                        default = default._default
+
                     newvalue = getattr(storagemodel, key, None)
                     if (newvalue is None) or (newvalue == default):
                         oldvalue = getattr(entity, key, default)
@@ -462,7 +476,7 @@ class StorageTableContext():
             storagemodel._exists = True
 
         except AzureMissingResourceHttpError as e:
-            log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
+            log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey(), e))
 
         except Exception as e:
             log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
@@ -496,7 +510,6 @@ class StorageTableContext():
 
         return storagequery
 
-
     def table_isempty(self, tablename, PartitionKey='', RowKey = '') -> bool:
         if  (not self._tableservice is None):
 
@@ -519,4 +532,12 @@ class StorageTableContext():
         else:
             return True
         pass
+
+    def __encryptionresolver__(self, encryptproperties):
+        def encryptionresolver(pk, rk, property_name):
+            if property_name in encryptproperties:
+                return True
+            else:
+                return False
+        return encryptionresolver
 

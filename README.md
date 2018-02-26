@@ -47,43 +47,16 @@ Azure Table storage stores large amounts of structured data. The service is a No
 ```
 # Model without encryption
 class TableOne(StorageTableModel):
-    Id = 0
-    Id2 = ''
-
-    def __setPartitionKey__(self):
-        self.PartitionKey = self.Id
-        return super().__setPartitionKey__()
-
-    def __setRowKey__(self):
-        self.RowKey = self.Id2
-        return super().__setRowKey__()
+    Id = PartitionKey(0) #You have to define one Property as PartitionKey (Part of Azure Storage Table Primary Key) with a default Value
+    Id2 = RowKey('') #You have to define one Property as RowKey (Part of Azure Storage Table Primary Key) with a default Value
 
 #Model with Partly encryption
 class TableTwo(StorageTableModel):
-    _encrypt = True
-
-    Id = ''
-    Id2 = ''
-    Secret = ''
+    Id = PartitionKey('')
+    Id2 = RowKey('')
+    Secret = EncryptKey('') # a Property you like to en-/decrypt clientside has to define as "EncryptKey" with an default Value
     NonSecret = ''
-
-    def __setPartitionKey__(self):
-        self.PartitionKey = self.Id
-        return super().__setPartitionKey__()
-
-    def __setRowKey__(self):
-        self.RowKey = self.Id2
-        return super().__setRowKey__()
-
-    @staticmethod
-    def __encryptionresolver__(pk, rk, property_name):
-        """ define properties to encrypt 
-            overwrite if inherit this class
-        """
-        if property_name in ['Secret']:
-            return True
-        else:
-            return False
+    Secret2 = EncryptKey('second encrypt') # of cause you can mix multiple encrypted and non encrypted Properties in a Table Model
 ```
 
 Now you can initiate Your StorageTableContext and register your Model:
