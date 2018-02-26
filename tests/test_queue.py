@@ -33,13 +33,23 @@ class QueueOne(StorageQueueModel):
     sourcelink = ''
 
 
+class QueueTwo(StorageQueueModel):
+    _encrypt = True
+    _queuename = 'encryptedtest'
+
+    user = ''
+    password = ''
+    server = ''
+    protocol = ''
+
+
 """ Testcases positiv"""
 class TestStorageQueuePositive(object):
 
     def test_register_model(self):
         queue = StorageQueueContext(**testconfig)
         queue.register_model(QueueOne())
-        assert 'QueueOne' in queue._models
+        assert 'QueueOne' in [model['modelname'] for model in queue._modeldefinitions]
 
 
     def test_put(self):
@@ -100,23 +110,50 @@ class TestStorageQueuePositive(object):
         queue = StorageQueueContext(**testconfig)
         message = QueueOne() 
         queue.register_model(message)
-        assert message.__class__.__name__ in queue._models
+        assert message.__class__.__name__ in [model['modelname'] for model in queue._modeldefinitions]
 
         queue.unregister_model(message)
-        assert not message.__class__.__name__ in queue._models
+        assert not message.__class__.__name__ in [model['modelname'] for model in queue._modeldefinitions]
+
+
+    def test_get_nothide_encrypted(self):
+        queue = StorageQueueContext(**testconfig)
+        message = QueueTwo()
+        queue.register_model(message)
+        
+        message.server = 'encrypted server'
+        message.protocol = 'sftp'
+        message.user = 'user'
+        message.password = 'secret'
+
+        queue.put(message)
+
+        message = queue.get(QueueTwo(), hide=1)
+        assert (message.server == 'encrypted server' and 
+                message.protocol == 'sftp' and 
+                message.user == 'user' and 
+                message.password == 'secret')
+
+        time.sleep(1)
+
+        testmessage = queue.get(QueueTwo())
+        queue.delete(testmessage)
 
 """ Testcases Housekeeping"""
 class TestStorageQueueHousekeeping(object):
 
     def test_unregister_model_delete(self):
         queue = StorageQueueContext(**testconfig)
-        message = QueueOne() 
-        queue.register_model(message)
-        assert message.__class__.__name__ in queue._models
 
-        queue.unregister_model(message, delete_queue=True)
-        assert not message.__class__.__name__ in queue._models        
+        queue.register_model(QueueTwo())
+        queue.register_model(QueueOne())
+        assert ('QueueOne' in [model['modelname'] for model in queue._modeldefinitions] and
+                'QueueTwo' in [model['modelname'] for model in queue._modeldefinitions])
 
+        queue.unregister_model(QueueOne(), delete_queue=True)
+        queue.unregister_model(QueueTwo(), delete_queue=True)
+        assert (not 'QueueOne' in [model['modelname'] for model in queue._modeldefinitions] and
+                not 'QueueTwo' in [model['modelname'] for model in queue._modeldefinitions])
 
 
 
