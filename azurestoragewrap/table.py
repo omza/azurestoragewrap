@@ -7,14 +7,17 @@ from azure.storage.table import TableService, Entity
 import datetime
 from functools import wraps
 
-""" snippets """
-from azurestoragewrap.snippets import safe_cast
+""" helpers """
+from azurestoragewrap.snippets import safe_cast, test_azurestorage_nameconventions
 
 """ encryption """
 from azurestoragewrap.encryption import (
     KeyWrapper,
     KeyResolver    
     )
+
+""" custom Exceptions """
+from azurestoragewrap.exception import  AzureStorageWrapException, NameConventionError
 
 """ logging """
 import logging
@@ -332,7 +335,15 @@ class StorageTableContext():
             - storagemodel: StorageTableModel(Object)
 
         """
-        if modeldefinition is None: 
+        if modeldefinition is None:
+
+            """ test if queuename already exists """
+            if [model for model in self._modeldefinitions if model['tablename'] == storagemodel._tablename]:
+                raise NameConventionError(storagemodel._tablename)
+
+            """ test if queuename fits to azure naming rules """
+            if not test_azurestorage_nameconventions(storagemodel._tablename, 'StorageTableModel'):
+                raise NameConventionError(storagemodel._tablename)            
                 
             """ now register model """
             modeldefinition = {

@@ -9,13 +9,16 @@ from functools import wraps
 
 
 """ helpers """
-from azurestoragewrap.snippets import safe_cast
+from azurestoragewrap.snippets import safe_cast, test_azurestorage_nameconventions
 
 """ encryption """
 from azurestoragewrap.encryption import (
     KeyWrapper,
     KeyResolver    
     )
+
+""" custom Exceptions """
+from azurestoragewrap.exception import  AzureStorageWrapException, NameConventionError
 
 """ logging """
 import logging
@@ -189,8 +192,16 @@ class StorageQueueContext():
             required Parameter is:
             - storagemodel: StorageQueueModel(Object)
         """
-        if modeldefinition is None: 
-                
+        if modeldefinition is None:
+            
+            """ test if queuename already exists """
+            if [model for model in self._modeldefinitions if model['queuename'] == storagemodel._queuename]:
+                raise NameConventionError(storagemodel._queuename)
+
+            """ test if queuename fits to azure naming rules """
+            if not test_azurestorage_nameconventions(storagemodel._queuename, 'StorageQueueModel'):
+                raise NameConventionError(storagemodel._queuename)
+             
             """ now register model """
             modeldefinition = {
                 'modelname': storagemodel.__class__.__name__,

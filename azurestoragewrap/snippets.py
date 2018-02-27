@@ -1,5 +1,6 @@
 """ imports & globals """
 import datetime
+import re
 
 """ snippets """
 def safe_cast(val, to_type, default=None, dformat=''):
@@ -26,3 +27,23 @@ def safe_cast(val, to_type, default=None, dformat=''):
         
     except (ValueError, TypeError):
         return default
+
+
+def test_azurestorage_nameconventions(storageobjectname, storageobjecttype):
+
+    if storageobjecttype == 'StorageTableModel':
+        pattern = re.compile('^[A-Za-z][A-Za-z0-9]{2,62}$')
+
+    elif storageobjecttype == 'StorageQueueModel':
+        pattern = re.compile('^[a-z0-9][\-a-z0-9]{2,62}$')
+
+    else:
+        pattern = re.compile('')
+
+    if pattern.match(storageobjectname):
+        return True
+    else:
+        return False
+    pass
+
+

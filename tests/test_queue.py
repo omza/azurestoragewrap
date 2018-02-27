@@ -20,10 +20,11 @@ log = logging.getLogger('azurestoragewrap')
 
 """ Import application azurestoragewrap.table """        
 from azurestoragewrap.queue import StorageQueueContext, StorageQueueModel
-
+from azurestoragewrap.exception import NameConventionError
 
 """ imports & Globals """
 import time
+import pytest
 
 class QueueOne(StorageQueueModel):
 
@@ -36,6 +37,15 @@ class QueueOne(StorageQueueModel):
 class QueueTwo(StorageQueueModel):
     _encrypt = True
     _queuename = 'encryptedtest'
+
+    user = ''
+    password = ''
+    server = ''
+    protocol = ''
+
+
+class QueueThree(StorageQueueModel):
+    _queuename = 'NamingDoesNotFit'
 
     user = ''
     password = ''
@@ -138,6 +148,16 @@ class TestStorageQueuePositive(object):
 
         testmessage = queue.get(QueueTwo())
         queue.delete(testmessage)
+
+
+class TestStorageQueueNegative(object):
+    """ test if exceptions raised well """
+
+    def test_error_naming_convention(self):
+        queue = StorageQueueContext(**testconfig)
+        with pytest.raises(NameConventionError):
+            queue.register_model(QueueThree())
+
 
 """ Testcases Housekeeping"""
 class TestStorageQueueHousekeeping(object):
