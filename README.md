@@ -4,7 +4,7 @@
 
 > A Python Wrapper for modeling client side encrypted azure storage tables, queues and blobs
 
-Inspired by the conversion of data modeling in [SQLAlchemy](https://github.com/zzzeek/sqlalchemy) lib - What the great Job! Thank You! -, i wrote this little wrapper around the [Azure Storage SDK for Python](https://github.com/Azure/azure-storage-python) to simplify modeling data structures and easily implement Client Side Encryption for my own needs. 
+Inspired by the implementation of data modeling in [SQLAlchemy](https://github.com/zzzeek/sqlalchemy) lib - What the great Job! Thank You! -, i wrote this little wrapper around the [Azure Storage SDK for Python](https://github.com/Azure/azure-storage-python) to simplify modeling data structures and easily implement Client Side Encryption for my own needs. 
 Would be lucky if this lib helps other peoples too. GitHub Issues, Stars, Forks and Contribution are Welcome! Have fun with azurestoragewrap.
 
 Microsoft Azure Storage is a Microsoft-managed cloud service that provides storage that is highly available, secure, durable, scalable, and redundant. Azure Storage consists of Blob storage, Table Storage, and Queue storage. 
@@ -21,29 +21,33 @@ pip install azurestoragewrap
 ## Usage examples
 
 Using azurestoragewrap should be as easy as possible and has to be handle in a few steps:
-- config Your settings, incl. Your Azure Storage Credentials in a python dictionary
-- model Your Data Objects as a subclass of StorageTableModel, StorageQueueModel or StorageBlobModel
+- config your settings, incl. your Azure Storage Credentials in a python dictionary
 - initiate the StorageContext
-- register Your Model to the StorageContext
+- model your Data Objects as a subclass of StorageTableModel, StorageQueueModel or StorageBlobModel
+- register your Model to the StorageContext
 
 ### Configuration
 
-Configure as followed 
+With following Settings you can setup azurestoragewrap Context Objects. First of all you have to configure your [Azure Storage Credentials]() or while testing try the local Emulator which has to be installed and up and running of cause:  
 
 ```
-config = {
-    'AZURE_STORAGE_NAME': '',
-    'AZURE_STORAGE_KEY': '',
-    'AZURE_REQUIRE_ENCRYPTION': True,
-    'AZURE_STORAGE_IS_EMULATED': True,
-    'AZURE_KEY_IDENTIFIER': 'azurestoragewrap_test',
-    'AZURE_SECRET_KEY': 'supa-dupa-secret-special-key2901'
-}
+AZURE_STORAGE_NAME = ''
+AZURE_STORAGE_KEY = ''
+```
+or
+```
+AZURE_STORAGE_IS_EMULATED = True   #True or False,
+```
+if you want to use the client side encryption your welcome to set up a key identifier and a SECRET Key for encryption/decryption
+```
+AZURE_KEY_IDENTIFIER = 'azurestoragewrap_test',
+AZURE_SECRET_KEY = 'supa-dupa-secret-special-key2901' # Has to be a valid AES length (8,16,32 characters)
 ```
 
 ### Table
 
 Azure Table storage stores large amounts of structured data. The service is a NoSQL datastore which accepts authenticated calls from inside and outside the Azure cloud. Azure tables are ideal for storing structured, non-relational data. To handle Table Data you have to model your Table structure like this:
+
 ```
 # Model without encryption
 class TableOne(StorageTableModel):
