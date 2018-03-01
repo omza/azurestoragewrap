@@ -43,9 +43,10 @@ AZURE_SECRET_KEY = 'supa-dupa-secret-special-key2901' # Has to be a valid AES le
 ### Table
 Azure Table storage stores large amounts of structured data. The service is a NoSQL datastore which accepts authenticated calls from inside and outside the Azure cloud. Azure tables are ideal for storing structured, non-relational data. 
 
-
-
-
+With the parameter above you can create a new StorageTableContext to initiate an Azure Connection:
+```
+db = StorageTableContext(**testconfig)
+```
 To handle Table Data you have to model your Table structure like this:
 ```
 # Model without encryption
@@ -62,10 +63,10 @@ class TableTwo(StorageTableModel):
     Secret2 = EncryptKey('second encrypt') # of cause you can mix multiple encrypted and non encrypted Properties in a Table Model
 ```
 
-Now you can initiate Your StorageTableContext and register your Model:
+Now you can register your Models defined above:
 ```
-db = StorageTableContext(**testconfig)
 db.register_model(TableOne())
+db.register_model(TableTwo())
 ```
 
 Now get started:
