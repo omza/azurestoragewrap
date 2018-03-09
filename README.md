@@ -128,7 +128,7 @@ db.register_model(TableThree())
 
 entity = TableThree(Id=1, TableThreeId='Second')
 entity.OneToN = db.query(entity.OneToN)
-´´´
+```
 In design time the property 'OneToN' of Model 'TableThree' is defined as an 1-n relationship to Model 'TableTwo' joining the PartitionKey of TableTwo with TableThree.TableThreeId as the foreign Key.
 When creating a Instance of TableThree (here 'entity') the StorageTableQuery is initiated as well with the given value for 'TableThreeId'  
  
