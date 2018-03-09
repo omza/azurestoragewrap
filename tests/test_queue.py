@@ -149,7 +149,7 @@ class TestStorageQueuePositive(object):
         testmessage = queue.get(QueueTwo())
         queue.delete(testmessage)
 
-
+""" Testcases negative"""
 class TestStorageQueueNegative(object):
     """ test if exceptions raised well """
 

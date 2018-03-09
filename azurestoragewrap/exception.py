@@ -13,7 +13,19 @@ class AzureStorageWrapException(Exception):
 
 
 class NameConventionError(AzureStorageWrapException):
-    """When you drive too fast"""
+    """If the Storage Object does not fit to Name conventions"""
     def __init__(self, storagemodel=None):
         msg = '{!s} does not fit to the Azure Storage Name Conventions: https://blogs.msdn.microsoft.com/jmstall/2014/06/12/azure-storage-naming-rules/'.format(storagemodel)
         super(NameConventionError, self).__init__(storagemodel, msg)
+
+class ModelNotRegisteredError(AzureStorageWrapException):
+    """If the Model is not registered"""
+    def __init__(self, storagemodel=None):
+        msg = 'Please register Model {!s} before useing it'.format(storagemodel)
+        super(ModelNotRegisteredError, self).__init__(storagemodel, msg)
+
+class ModelRegisteredMoreThanOnceError(AzureStorageWrapException):
+    """If the Model is registered multiple times"""
+    def __init__(self, storagemodel=None):
+        msg = 'Something strange happend. Model {!s} is registered multipe times'.format(storagemodel)
+        super(ModelRegisteredMoreThanOnceError, self).__init__(storagemodel, msg)

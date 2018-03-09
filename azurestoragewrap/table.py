@@ -17,7 +17,7 @@ from azurestoragewrap.encryption import (
     )
 
 """ custom Exceptions """
-from azurestoragewrap.exception import  AzureStorageWrapException, NameConventionError
+from azurestoragewrap.exception import  AzureStorageWrapException, NameConventionError, ModelNotRegisteredError, ModelRegisteredMoreThanOnceError
 
 """ logging """
 import logging
@@ -268,10 +268,10 @@ class StorageTableContext():
                     modeldefinition = definitionlist[0]
 
                 elif len(definitionlist) > 1:
-                    raise Exception("multiple registration for model")
+                    raise ModelRegisteredMoreThanOnceError(storageobject)
 
                 if required and (not isinstance(modeldefinition, dict)):
-                    raise Exception("Please register Model first")
+                    raise ModelNotRegisteredError(storageobject)
 
                 return func(self, storageobject, modeldefinition, *args, **kwargs)
 

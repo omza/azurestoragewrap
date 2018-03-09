@@ -22,6 +22,15 @@ log = logging.getLogger('azurestoragewrap')
 """ Import application azurestoragewrap.table """        
 from azurestoragewrap.table import StorageTableModel, StorageTableContext, StorageTableQuery, PartitionKey, RowKey, EncryptKey
 
+
+# Exeptions
+from azurestoragewrap.exception import NameConventionError, ModelRegisteredMoreThanOnceError, ModelNotRegisteredError
+
+# pytest
+import time
+import pytest
+
+
 """ define table test models """
 class TableOne(StorageTableModel):
     Id = PartitionKey(0) #You have to define one Property as PartitionKey (Part of Azure Storage Table Primary Key) with a default Value
@@ -35,16 +44,6 @@ class TableTwo(StorageTableModel):
     Secret2 = EncryptKey('second encrypt') # of cause you can mix multiple encrypted and non encrypted Properties in a Table Model
 
 
-    @staticmethod
-    def __encryptionresolver__(pk, rk, property_name):
-        """ define properties to encrypt 
-            overwrite if inherit this class
-        """
-        if property_name in ['Secret']:
-            return True
-        else:
-            return False
-
 class TableThree(StorageTableModel):
     Id = PartitionKey(0)
     Id2 = RowKey('')
@@ -55,6 +54,11 @@ class Table4(StorageTableModel):
     Id = PartitionKey(0)
     Id2 = RowKey('')
     TableName = True
+
+class TableNameConventionError(StorageTableModel):
+    _tablename = '!"§$%&/()=?asdkjkllllllllllllllllllllllllllllllllllllllllllllllllllllllllalsdalsnclyxnvxcvjndfnldnböfgnbköfgböfnbälfkgbkfgmblfk gbl flbknowerpweufndkövnvndlfvndöjfnvoeruvnköjvxkv'
+    Id = PartitionKey(0)
+    Id2 = RowKey('')
 
 
 """ Testcases positiv"""
@@ -137,7 +141,18 @@ class TestStorageTablePositive(object):
         db.insert(model)
         assert model.TableName == True
 
+ # Testcases negative
+class TestStorageTableNegative(object):
 
+    def test_error_naming_convention(self):
+        db = StorageTableContext(**testconfig)
+        with pytest.raises(NameConventionError):
+            db.register_model(TableNameConventionError())
+
+    def test_register_model_first(self):
+        db = StorageTableContext(**testconfig)
+        with pytest.raises(ModelNotRegisteredError):
+            testentry = db.get(TableOne(Id=1, Id2 ='test_exists_entry'))
 
 
 """ Housekeeping """
