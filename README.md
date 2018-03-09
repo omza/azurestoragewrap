@@ -95,7 +95,6 @@ mergeentity = db.merge(mergeentity)
 
 ### Table Queries & Relationships (1-n)
 If you like to query a Storage Table or define a Relationship within a StorageTableModel feel free to use the StorageTableQuery Object, wich is a subclass of the pyton list object:
-
 ```
 class TableTwo(StorageTableModel):
 	_tablename = 'tabletwo'
@@ -108,7 +107,7 @@ db.register_model(TableTwo())
 # define a adhoc Query
 query = StorageTableQuery(TableTwo(), pkcondition='eq', pkforeignkey='PartitionKey', pkcondition='eq', pkforeignkey='RowKey') 
 entities = db.query(query)
-´´´
+```
 The Query defined above gives you a List of all entities from Azure Storage Table named 'tabletwo' where the PartitionKey is equal (eq) to 'PartitionKey' AND where the RowKey is equal to 'RowKey'
 
 ```
@@ -132,7 +131,7 @@ entity.OneToN = db.query(entity.OneToN)
 ´´´
 In design time the property 'OneToN' of Model 'TableThree' is defined as an 1-n relationship to Model 'TableTwo' joining the PartitionKey of TableTwo with TableThree.TableThreeId as the foreign Key.
 When creating a Instance of TableThree (here 'entity') the StorageTableQuery is initiated as well with the given value for 'TableThreeId'  
-
+ 
 ### Queue
 
 Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously.
