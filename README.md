@@ -45,7 +45,7 @@ Azure Table storage stores large amounts of structured data. The service is a No
 
 With the parameter above you can create a new StorageTableContext to initiate an Azure Connection:
 ```
-db = StorageTableContext(**testconfig)
+db = StorageTableContext(**config)
 ```
 To handle Table Data you have to model your Table structure like this:
 ```
@@ -93,6 +93,45 @@ mergeentity = TableTwo(Id=1, Id2 ='test_partly_encryption', Secret='', NonSecret
 mergeentity = db.merge(mergeentity)
 ```
 
+### Table Queries & Relationships (1-n)
+If you like to query a Storage Table or define a Relationship within a StorageTableModel feel free to use the StorageTableQuery Object, wich is a subclass of the pyton list object:
+
+```
+class TableTwo(StorageTableModel):
+	_tablename = 'tabletwo'
+    Id = PartitionKey('')
+    Id2 = RowKey('')
+
+db = StorageTableContext(**config)
+db.register_model(TableTwo())
+
+# define a adhoc Query
+query = StorageTableQuery(TableTwo(), pkcondition='eq', pkforeignkey='PartitionKey', pkcondition='eq', pkforeignkey='RowKey') 
+entities = db.query(query)
+´´´
+The Query defined above gives you a List of all entities from Azure Storage Table named 'tabletwo' where the PartitionKey is equal (eq) to 'PartitionKey' AND where the RowKey is equal to 'RowKey'
+
+```
+# Relationship (1-n) within a Model
+class TableTwo(StorageTableModel):
+	_tablename = 'tabletwo'
+    Id = PartitionKey('')
+    Id2 = RowKey('')
+
+class TableThree(StorageTableModel):
+    Id = PartitionKey(0)
+    TableThreeId = RowKey('')
+    OneToN = StorageTableQuery(TableTwo(), pkcondition='eq', pkforeignkey='TableThreeId')
+
+db = StorageTableContext(**config)
+db.register_model(TableTwo())
+db.register_model(TableThree())
+
+entity = TableThree(Id=1, TableThreeId='Second')
+entity.OneToN = db.query(entity.OneToN)
+´´´
+In design time the property 'OneToN' of Model 'TableThree' is defined as an 1-n relationship to Model 'TableTwo' joining the PartitionKey of TableTwo with TableThree.TableThreeId as the foreign Key.
+When creating a Instance of TableThree (here 'entity') the StorageTableQuery is initiated as well with the given value for 'TableThreeId'  
 
 ### Queue
 
