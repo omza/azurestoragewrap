@@ -10,7 +10,7 @@ Microsoft Azure Storage is a Microsoft-managed cloud service that provides stora
 All Data can be accessed from anywhere in the world via HTTP or HTTPS.
 
 ## Getting started
-Get azurestoragewrap via pip
+azurestoragewrap is available on [PyPi](https://pypi.org/project/azurestoragewrap/)! Get azurestoragewrap via pip
 
 ```
 pip install azurestoragewrap
@@ -43,9 +43,14 @@ AZURE_SECRET_KEY = 'supa-dupa-secret-special-key2901' # Has to be a valid AES le
 ### Table
 Azure Table storage stores large amounts of structured data. The service is a NoSQL datastore which accepts authenticated calls from inside and outside the Azure cloud. Azure tables are ideal for storing structured, non-relational data. 
 
-With the parameter above you can create a new StorageTableContext to initiate an Azure Connection:
+With the parameter above you can create a new StorageTableContext Instance to initiate an Azure Connection:
 ```
-db = StorageTableContext(**config)
+db = StorageTableContext(AZURE_STORAGE_NAME, 
+							AZURE_STORAGE_KEY,
+							AZURE_STORAGE_IS_EMULATED
+							AZURE_KEY_IDENTIFIER',
+							AZURE_SECRET_KEY
+							)
 ```
 To handle Table Data you have to model your Table structure like this:
 ```
@@ -134,18 +139,79 @@ When creating a Instance of TableThree (here 'entity') the StorageTableQuery is 
  
 ### Queue
 
-Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously.
+Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously. Use Azure Queue Storage to build flexible applications and separate functions for better durability across large workloads. When you design applications for scale, application components can be decoupled, so that they can scale independently. Queue storage gives you asynchronous message queuing for communication between application components, whether they are running in the cloud, on the desktop, on premises or on mobile devices.
 
+To start working with Queue Messages you have to model the properties by subclassing StorageQueueModel. In difference to StorageTables entry, a queue message can only be encrypted client-side completely. In contrast to a storage table entry, a queue message can only be encrypted completely. Therefore, the encryption will be configured for the entire StorageQueueModel by set '_encrypt=True' and not on the property level like in StorageTableModel.
+```
+# Model without encryption
+class QueueOne(StorageQueueModel):
+    epgid = 0
+    statuscode = 1
+	statusmessage = 'New'
+
+
+#Model with encryption
+class QueueTwo(StorageQueueModel):
+    _encrypt = True
+    _queuename = 'encryptedtest'
+    user = ''
+    password = ''
+    server = ''
+    protocol = ''
+```
+After modeling your StorageQueueModels you have create a StorageQueueContext instance with the Parameter mentioned above and register the models in this instance. 
+```
+queue = StorageQueueContext(AZURE_STORAGE_NAME, 
+							AZURE_STORAGE_KEY,
+							AZURE_STORAGE_IS_EMULATED
+							AZURE_KEY_IDENTIFIER',
+							AZURE_SECRET_KEY
+							)
+
+# Register StorageQueueModels like this:
+queue.register_model(QueueTwo())
+queue.register_model(QueueOne())
 
 ```
-Give an example
+Now you are able to peek, put, get update and delete queue messages like this:
+```
+# queue.put()
+# add a queue message at the end of the queue just put it:
+message = QueueOne(epgid = 1, resolution = 'test_put')
+queue.put(message)
+
+# queue.peek()
+# lookup (peek) the first message in the queue. firstmessage will be an instance of class QueueOne
+firstmessage = queue.peek(QueueOne())
+
+# queue.get()
+# will get the first message in the queue. firstmessage will be an instance of class QueueOne. Use the get instead of the peek method if you like to further process the message (update or delete)
+firstmessage = queue.get(QueueOne())
+#or if you like to hide current message (like below 10 seconds) to e.g. other worker sessions
+firstmessage = queue.get(QueueOne(), hide=10)
+
+# queue.delete()
+# if your worker session processed a queue message completely it makes sense to delete it from the queue like this:
+firstmessage = queue.get(QueueOne())
+# ... further processing ...
+queue.delete(firstmessage)
+
+# queue.update()
+# or your worker session will update the queue message e.g. a error raises during processing
+firstmessage = queue.get(QueueOne())
+try:
+	# ... further processing raises en error...
+except Exception as e:
+	firstmessage.statuscode = -1
+	firstmessage.statusmessage = e
+	queue.update(firstmessage)
 ```
 
 ### Blob
 
 Azure Blob storage is a service for storing large amounts of unstructured object data, such as text or binary data - e.g. to serve images or documents directly to a browser.
 
-
+With the parameter above you can create a new StorageTableContext Instance to initiate an Azure Connection:
 ```
 Give an example
 ```
