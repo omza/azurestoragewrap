@@ -306,7 +306,7 @@ class StorageTableContext():
                 modeldefinition['tableservice'].create_table(modeldefinition['tablename'])
                 return True
             
-            except AzureException as e:
+            except Exception as e:
                 log.error('failed to create {} with error {}'.format(tablename, e))
                 return False
         else:
@@ -319,9 +319,9 @@ class StorageTableContext():
                 modeldefinition['tableservice'].delete_table(modeldefinition['tablename'])
                 return True
             
-            except AzureException as e:
-                log.error('failed to create {} with error {}'.format(tablename, e))
-                return False
+            except Exception as e:
+                msg = 'failed to create {} with error {}'.format(tablename, e)
+                raise AzureStorageWrapException(msg=msg)
         else:
             return False
         pass
@@ -417,6 +417,9 @@ class StorageTableContext():
             
             except AzureMissingResourceHttpError:
                 storagemodel._exists = False
+            except Exception as e:
+                msg = 'failed to create {} with error {}'.format(tablename, e)
+                raise AzureStorageWrapException(msg=msg)
         else:
             exists = storagemodel._exists
                         
@@ -441,8 +444,8 @@ class StorageTableContext():
             storagemodel._exists = False
 
         except Exception as e:
-            log.debug('can not get table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
-            storagemodel._exists = False
+            msg = 'can not get table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e)
+            raise AzureStorageWrapException(msg=msg)
 
         finally:
             return storagemodel
@@ -459,8 +462,8 @@ class StorageTableContext():
             log.debug('can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
         except Exception as e:
             storagemodel._exists = False
-            log.debug('can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
-
+            msg = 'can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e)
+            raise AzureStorageWrapException(msg=msg)
 
         finally:
             return storagemodel
@@ -517,7 +520,12 @@ class StorageTableContext():
                 storagequery.extend(modeldefinition['tableservice'].query_entities(modeldefinition['tablename'],filter=storagequery._queryfilter))
 
         except AzureMissingResourceHttpError as e:
-            log.debug('can not query table {} with filters {} because {!s}'.format(modeldefinition['tablename'], storagequery._queryfilter, e))            
+            storagequery = []
+            log.debug('can not query table {} with filters {} because {!s}'.format(modeldefinition['tablename'], storagequery._queryfilter, e))
+
+        except Exception as e:
+            msg = 'can not query table {} with filters {} because {!s}'.format(modeldefinition['tablename'], storagequery._queryfilter, e)
+            raise AzureStorageWrapException(msg=msg)            
 
         return storagequery
 
@@ -540,6 +548,9 @@ class StorageTableContext():
                 log.debug('failed to query {} with error {}'.format(tablename, e))
                 return True
 
+            except Exception as e:
+                msg = '{!s}'.format(e)
+                raise AzureStorageWrapException(msg=msg)
         else:
             return True
         pass

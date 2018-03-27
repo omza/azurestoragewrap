@@ -45,12 +45,13 @@ Azure Table storage stores large amounts of structured data. The service is a No
 
 With the parameter above you can create a new StorageTableContext Instance to initiate an Azure Connection:
 ```
-db = StorageTableContext(AZURE_STORAGE_NAME, 
-							AZURE_STORAGE_KEY,
-							AZURE_STORAGE_IS_EMULATED
-							AZURE_KEY_IDENTIFIER',
-							AZURE_SECRET_KEY
-							)
+db = StorageTableContext(
+	AZURE_STORAGE_NAME, 
+	AZURE_STORAGE_KEY,
+	AZURE_STORAGE_IS_EMULATED
+	AZURE_KEY_IDENTIFIER',
+	AZURE_SECRET_KEY
+	)
 ```
 To handle Table Data you have to model your Table structure like this:
 ```
@@ -141,7 +142,7 @@ When creating a Instance of TableThree (here 'entity') the StorageTableQuery is 
 
 Azure Queue storage is a service for storing large numbers of messages - e.g. a backlog of work to process asynchronously. Use Azure Queue Storage to build flexible applications and separate functions for better durability across large workloads. When you design applications for scale, application components can be decoupled, so that they can scale independently. Queue storage gives you asynchronous message queuing for communication between application components, whether they are running in the cloud, on the desktop, on premises or on mobile devices.
 
-To start working with Queue Messages you have to model the properties by subclassing StorageQueueModel. In difference to StorageTables entry, a queue message can only be encrypted client-side completely. In contrast to a storage table entry, a queue message can only be encrypted completely. Therefore, the encryption will be configured for the entire StorageQueueModel by set '_encrypt=True' and not on the property level like in StorageTableModel.
+To start working with Queue Messages you have to model the properties by subclassing StorageQueueModel. In difference to StorageTables entry, a queue message can only be encrypted client-side completely. Therefore, the encryption will be configured for the entire StorageQueueModel by set '_encrypt=True' and not on the property level like in StorageTableModel.
 ```
 # Model without encryption
 class QueueOne(StorageQueueModel):
@@ -161,12 +162,13 @@ class QueueTwo(StorageQueueModel):
 ```
 After modeling your StorageQueueModels you have create a StorageQueueContext instance with the Parameter mentioned above and register the models in this instance. 
 ```
-queue = StorageQueueContext(AZURE_STORAGE_NAME, 
-							AZURE_STORAGE_KEY,
-							AZURE_STORAGE_IS_EMULATED
-							AZURE_KEY_IDENTIFIER',
-							AZURE_SECRET_KEY
-							)
+queue = StorageQueueContext(
+	AZURE_STORAGE_NAME, 
+	AZURE_STORAGE_KEY,
+	AZURE_STORAGE_IS_EMULATED
+	AZURE_KEY_IDENTIFIER',
+	AZURE_SECRET_KEY
+	)
 
 # Register StorageQueueModels like this:
 queue.register_model(QueueTwo())

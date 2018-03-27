@@ -1,4 +1,6 @@
-
+""" logging """
+import logging
+log = logging.getLogger('azurestoragewrap')
 
 class AzureStorageWrapException(Exception):
     """Basic exception for errors raised by azurestoragewrap lib"""
@@ -7,6 +9,7 @@ class AzureStorageWrapException(Exception):
         if msg is None:
             # Set some default useful error message
             msg = 'An error occured within azurestoragewrap library'
+        log.error(msg)
 
         super(AzureStorageWrapException, self).__init__(msg)
         self.storagemodel = storagemodel

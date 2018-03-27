@@ -18,6 +18,17 @@ with open(path.join(here, 'README.md'), encoding='utf-8',errors='ignore') as f:
 
 README = 'Inspired by the implementation of data modeling in [SQLAlchemy](https://github.com/zzzeek/sqlalchemy) lib - What the great Job! Thank You! -, i wrote this little wrapper around the [Azure Storage SDK for Python](https://github.com/Azure/azure-storage-python) to simplify modeling data structures and easily implement Client Side Encryption for my own needs. Would be lucky if this lib helps other peoples too. GitHub Issues, Stars, Forks and Contribution are Welcome! Have fun with azurestoragewrap. Microsoft Azure Storage is a Microsoft-managed cloud service that provides storage that is highly available, secure, durable, scalable, and redundant. Azure Storage consists of Blob storage, Table Storage, and Queue storage.  All Data can be accessed from anywhere in the world via HTTP or HTTPS.'
 
+# PEP440 if follow a simple "major.minor.micro" versioning approach like:
+# increment 'major' if there is some major changes happened in application. Like a upgrade from Python 2 to Python 3. (minor, micro restart with 0)
+# increment 'minor' if there is some minor changes like any new CR or Enhancement is implemented. (micro restart with 0)
+# increment 'micro' if there is some defects fixes in the code. 
+ 
+major = 0
+minor = 1
+micro = 17
+azurestoragewraprelease = '{!s}.{!s}.{!s}'.format(major,minor,micro)
+
+
 # Arguments marked as "Required" below must be included for upload to PyPI.
 # Fields marked as "Optional" may be commented out.
 
@@ -41,7 +52,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.0.16',  # Required
+    version=azurestoragewraprelease,  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:

@@ -18,7 +18,7 @@ from azurestoragewrap.encryption import (
     )
 
 """ custom Exceptions """
-from azurestoragewrap.exception import  AzureStorageWrapException, NameConventionError
+from azurestoragewrap.exception import  AzureStorageWrapException, NameConventionError, ModelNotRegisteredError, ModelRegisteredMoreThanOnceError
 
 """ logging """
 import logging
@@ -164,9 +164,10 @@ class StorageQueueContext():
                 modeldefinition['queueservice'].create_queue(modeldefinition['queuename'])
                 return True
 
-            except AzureException as e:
-                log.error('failed to create {} with error {}'.format(modeldefinition['queuename'], e))
-                return False
+            except Exception as e:
+                msg = 'failed to create {} with error {}'.format(modeldefinition['queuename'], e)
+                raise AzureStorageWrapException(msg=msg)
+
         else:
             return True
         pass
@@ -177,9 +178,10 @@ class StorageQueueContext():
                 modeldefinition['queueservice'].delete_queue(modeldefinition['queuename'])
                 return True
 
-            except AzureException as e:
-                log.error('failed to delete {} with error {}'.format(modeldefinition['queuename'], e))
-                return False
+            except Exception as e:
+                msg = 'failed to delete {} with error {}'.format(modeldefinition['queuename'], e)
+                raise AzureStorageWrapException(msg=msg)
+
         else:
             return True
         pass
@@ -269,10 +271,11 @@ class StorageQueueContext():
             message = modeldefinition['queueservice'].put_message(storagemodel._queuename, storagemodel.getmessage())
             storagemodel.mergemessage(message)
 
-        except AzureException as e:
-            log.error('can not save queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
+        except Exception as e:
             storagemodel = None
-
+            msg = 'can not save queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e)
+            raise AzureStorageWrapException(msg=msg)
+           
         finally:
             return storagemodel
 
@@ -291,9 +294,10 @@ class StorageQueueContext():
             if storagemodel.id is None:
                 storagemodel = None
 
-        except AzureException as e:
-            log.error('can not peek queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
+        except Exception as e:
             storagemodel = None
+            msg = 'can not peek queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e)
+            raise AzureStorageWrapException(msg=msg)
 
         finally:
             return storagemodel
@@ -315,9 +319,10 @@ class StorageQueueContext():
             if storagemodel.id is None:
                 storagemodel = None
 
-        except AzureException as e:
-            log.error('can not get queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e))
+        except Exception as e:
             storagemodel = None
+            msg = 'can not peek queue message:  queue {} with message {} because {!s}'.format(storagemodel._queuename, storagemodel.content, e)
+            raise AzureStorageWrapException(msg=msg)
 
         finally:
             return storagemodel
@@ -333,9 +338,10 @@ class StorageQueueContext():
                 storagemodel.content = content
                 storagemodel.pop_receipt = message.pop_receipt
 
-            except AzureException as e:
-                log.error('can not update queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e))
+            except Exception as e:
+                msg = 'can not update queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e)
                 storagemodel = None
+                raise AzureStorageWrapException(msg=msg)
         else:
             log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modelname))
             storagemodel = None
@@ -351,8 +357,10 @@ class StorageQueueContext():
                 modeldefinition['queueservice'].delete_message(storagemodel._queuename, storagemodel.id, storagemodel.pop_receipt)
                 deleted = True
 
-            except AzureException as e:
-                log.error('can not delete queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e))
+            except Exception as e:
+                msg = 'can not delete queue message:  queue {} with message.id {!s} because {!s}'.format(storagemodel._queuename, storagemodel.id, e)
+                raise AzureStorageWrapException(msg=msg)
+
         else:
             log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modestoragemodel._queuenamelname))
 
