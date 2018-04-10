@@ -34,7 +34,7 @@ def test_azurestorage_nameconventions(storageobjectname, storageobjecttype):
     if storageobjecttype == 'StorageTableModel':
         pattern = re.compile('^[A-Za-z][A-Za-z0-9]{2,62}$')
 
-    elif storageobjecttype == 'StorageQueueModel':
+    elif storageobjecttype in ['StorageQueueModel', 'StorageBlobModel']:
         pattern = re.compile('^[a-z0-9][\-a-z0-9]{2,62}$')
 
     else:
