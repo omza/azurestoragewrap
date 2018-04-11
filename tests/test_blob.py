@@ -27,7 +27,7 @@ import time, os
 import pytest
 
 class BlobOne(StorageBlobModel):
-    _encrypt = False
+    _encrypt = True
     _containername = 'blobtest'
 
     user = ''
@@ -39,6 +39,13 @@ class BlobOne(StorageBlobModel):
 """ Testcases positiv"""
 class TestStorageBlobPositive(object):
 
+    metadata = {
+            'user':'bla', 
+            'password':'blabla', 
+            'server':'blablabla', 
+            'protocol':'sbla'
+        }
+
     def test_register_model(self):
         blob = StorageBlobContext(**testconfig)
         blob.register_model(BlobOne())
@@ -48,10 +55,11 @@ class TestStorageBlobPositive(object):
         container = StorageBlobContext(**testconfig)
         container.register_model(BlobOne())
 
-        blob = BlobOne('Test Blob', user='bla', password = 'blabla', server='blablabla', protocol='sbla')
+        blob = BlobOne(**self.__class__.metadata)
+        blob.fromtext('Test Blob')
         container.upload(blob)
 
-        assert blob.user == 'bla' and blob.getblobsource() == 'Test Blob'
+        assert blob.user == 'bla' and blob.__content__ == b'Test Blob'
 
     def test_upload_file(self):
         container = StorageBlobContext(**testconfig)
@@ -59,10 +67,12 @@ class TestStorageBlobPositive(object):
 
         path_to_file = os.path.join(os.path.dirname(__file__), 'oliver.jpg')
 
-        blob = BlobOne(path_to_file, user='bla', password = 'blabla', server='blablabla', protocol='sbla')
+        blob = BlobOne(**self.__class__.metadata)
+        blob.fromfile(path_to_file)
+
         container.upload(blob)
 
-        assert blob.user == 'bla' and blob.getblobsource() == path_to_file
+        assert blob.user == 'bla'
 
     def test_list_blobs(self):
         container = StorageBlobContext(**testconfig)
