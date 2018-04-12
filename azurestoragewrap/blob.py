@@ -1,13 +1,12 @@
 """ imports & globals """
-from azure.common import AzureMissingResourceHttpError, AzureException
 from azure.storage import CloudStorageAccount
-from azure.storage.blob import BlockBlobService, BlobBlock, ContentSettings
+from azure.storage.blob import BlockBlobService, Blob, ContentSettings
 
 import datetime, os
 from ast import literal_eval
 from functools import wraps
 import uuid
-from mimetypes import guess_type
+from mimetypes import guess_type, guess_extension, guess_all_extensions
 
 
 """ helpers """
@@ -28,17 +27,17 @@ log = logging.getLogger('azurestoragewrap')
 
 
 """ model base classes """
-class StorageBlobModel(BlobBlock):
+class StorageBlobModel(Blob):
     _containername = ''
     _encrypt = False
     _dateformat = ''
     _datetimeformat = ''
-    __blobname__ = ''
-    __content__ = None
-    __content_settings__ = None
 
     def __init__(self, **kwargs):                  
         """ Create a StorageBlobModel Instance """
+
+        """ super """
+        super().__init__()
 
         """ determine blob configuration """
         if self.__class__._containername == '':
@@ -47,53 +46,62 @@ class StorageBlobModel(BlobBlock):
             self._containername = self.__class__._containername
 
         self._encrypt = self.__class__._encrypt
-        self.__exists = None
                
         """ generate a uuid as blobname: if parameter blobname is None generate a UUID as blobname """
-        blobname = kwargs.get('blobname', None)
-        if blobname is None:
-            self.__blobname__ = str(uuid.uuid4()).replace('-', '')
+        name = kwargs.get('name', None)
+        if name is None:
+            self.name = str(uuid.uuid4()).replace('-', '')
         else:
-            self.__blobname__ = str(blobname)
+            self.name = str(name)
 
         """ collect metadata from **kwargs """
+        metadataimage = {}
         for key, default in vars(self.__class__).items():
-            if not key.startswith('_') and key != '':
-                if (not key in vars(BlobBlock).items()):
-                    if key in kwargs:                   
-                        value = kwargs.get(key)
-                        to_type = type(default)              
-                        if to_type is datetime.datetime:
-                            setattr(self, key, safe_cast(value, to_type, default, self._datetimeformat))
-                        elif to_type is datetime.date:
-                            setattr(self, key, safe_cast(value, to_type, default, self._dateformat))
-                        else:
-                            setattr(self, key, safe_cast(value, to_type, default))               
+            if not key.startswith('_') and key != '' and (not key in vars(Blob).items()):
+                if key in kwargs:                   
+                    value = kwargs.get(key)
+                    to_type = type(default)              
+                    if to_type is datetime.datetime:
+                        value = safe_cast(value, to_type, default, self._datetimeformat)
+                    elif to_type is datetime.date:
+                        value =  safe_cast(value, to_type, default, self._dateformat)
                     else:
-                        setattr(self, key, default)
+                        value = safe_cast(value, to_type, default)
+                    
+                    setattr(self, key, value)
+                    metadataimage[key] = value
 
+                else:
+                    setattr(self, key, default)
+                    metadataimage[key] = default
+
+        # blob source filename
         self.filename = ''
+        metadataimage['filename'] = ''
 
-        """ super """
-        super().__init__()
-          
+        # init metadata
+        self.metadata = metadataimage
 
-    def blobname(self) -> str:
-        return self.__blobname__
-
-    def __metadata__(self) -> dict:
-        """ parse self into unicode string as message content """   
+    def __instance_to_metadata__(self):
+        """ parse self self.metadata """   
         image = {}
+        image['filename'] = self.filename 
         for key, default in vars(self.__class__).items():
-            if not key.startswith('_') and key !='':                                      
-                image[key] = getattr(self, key, default)                                  
-        return dict(image)
+            if not key.startswith('_') and key !='' and (not key in vars(Blob).items()):                                      
+                image[key] = getattr(self, key, default)
+               
+        self.metadata = image
 
-    def settings(self) -> ContentSettings:
-        return self.__content_settings__
-            
-    def exists(self) -> bool:
-        return self.__exists
+    def __mergeblob__(self, message):
+        """ parse Blob Instance in Model vars """
+        if isinstance(message, Blob):
+            """ merge queue message vars """
+            for key, value in vars(message).items():
+                setattr(self, key, value)
+                if key == 'metadata':
+                    for metakey, metavalue in value.items():
+                        if metakey in vars(self):
+                            setattr(self, metakey, metavalue)
 
     def fromfile(self, path_to_file, mimetype=None):
         """ 
@@ -107,10 +115,10 @@ class StorageBlobModel(BlobBlock):
             # Load file into self.__content__
             self.filename = os.path.basename(path_to_file)
             with open(path_to_file, "rb") as in_file:
-                self.__content__ = in_file.read()
+                self.content = in_file.read()
 
             #guess mime-type
-            self.__content_settings__ = ContentSettings()
+            self.properties.content_settings = ContentSettings()
             
             if mimetype is None:
                 mimetype = guess_type(path_to_file)
@@ -118,10 +126,10 @@ class StorageBlobModel(BlobBlock):
                     mimetype = 'application/octet-stream'
                 else: 
                     if not mimetype[1] is None:
-                        self.__content_settings__.content_encoding = mimetype[1]
+                        self.properties.content_settings.content_encoding = mimetype[1]
                     mimetype = mimetype[0]
 
-            self.__content_settings__.content_type = mimetype
+            self.properties.content_settings.content_type = mimetype
 
         else:
             raise AzureStorageWrapException(self, 'Can not load blob content, because given path is not a local file')            
@@ -137,25 +145,60 @@ class StorageBlobModel(BlobBlock):
             text = text.encode(encoding, 'ignore')
 
             # Load text into self.__content__
-            self.__content__ = bytes(text)
+            self.content = bytes(text)
 
-            self.__content_settings__ = ContentSettings(content_type=mimetype, content_encoding=encoding)
+            self.properties.content_settings = ContentSettings(content_type=mimetype, content_encoding=encoding)
 
         else:
             raise AzureStorageWrapException(self, 'Can not load blob content, because given text is not from type string')
 
-    def tofile(self, path_to_file):
+    def tofile(self, path_to_file, replace_file=False):
         """ 
         save blob content from StorageBlobModel instance to file in given path/file. Parameters are:
-        - path_to_file (required): path to a local file
+        - path_to_file (required): local path or file
         """
-        return path_to_file
+
+        # create full path
+        if os.path.isdir(path_to_file):
+            if self.filename != '':
+                path_to_file = os.path.join(path_to_file, self.filename)
+            
+            else:
+                # guess extention from mimetype
+                path_to_file = os.path.join(path_to_file, self.name + guess_extension(self.properties.content_settings.content_type))
+
+        elif os.path.isfile(path_to_file):
+            # check if given file extention fits to self.filename or mime type
+            #  
+            if self.filename != '':
+                if os.path.splitext(self.filename)[1] != os.path.splitext(path_to_file)[1]:
+                    raise AzureStorageWrapException(self, 'can not save blob to file because file extention {!s} does not fit to source file or mime type'.format(path_to_file))
+      
+            else:
+                mimetype = guess_type(path_to_file)[0]
+                if mimtype != self.properties.content_settings.content_type:
+                    raise AzureStorageWrapException(self, 'can not save blob to file because file extention {!s} does not fit to source file or mime type'.format(path_to_file))
+                
+        else:
+            raise AzureStorageWrapException(self, 'can not save blob to file because {!s} is not a dir nor a file'.format(path_to_file))
+        
+        # check if file exists (and replace or error)
+        if os.path.isfile(path_to_file):
+            if replace_file:
+                os.remove(path_to_file)
+            else:
+                raise AzureStorageWrapException(self, 'can not save blob to file {!s} because file exists and replace_file is False'.format(path_to_file))
+
+        # save file into self.__content__
+        self.filename = os.path.basename(path_to_file)
+        with open(path_to_file, "wb") as out_file:
+            out_file.write(self.content)
 
     def totext(self) ->str:
         """ 
         return blob content from StorageBlobModel instance to a string. Parameters are:
         """
-        return str(self.__content__)
+        return str(self.content)
 
 
 
@@ -347,20 +390,25 @@ class StorageBlobContext():
     def upload(self, storagemodel:object, modeldefinition = None):
         """ insert blob message into storage """
 
-        if (storagemodel.__content__ is None) or (storagemodel.__content_settings__ is None):
+        if (storagemodel.content is None) or (storagemodel.properties.content_settings.content_type is None):
             # No content to upload
-            raise AzureStorageWrapException(storagemodel, "StorageBlobModel does not contain content")
+            raise AzureStorageWrapException(storagemodel, "StorageBlobModel does not contain content nor content settings")
 
         else:
             try:
+                # refresh metadata
+                storagemodel.__instance_to_metadata__()
+
+
                 """ upload bytes """
                 modeldefinition['blobservice'].create_blob_from_bytes(
                         container_name=modeldefinition['container'], 
-                        blob_name=storagemodel.blobname(), 
-                        blob=storagemodel.__content__, 
-                        metadata=storagemodel.__metadata__(), 
-                        content_settings=storagemodel.settings()
+                        blob_name=storagemodel.name, 
+                        blob=storagemodel.content, 
+                        metadata=storagemodel.metadata, 
+                        content_settings=storagemodel.properties.content_settings
                     )
+
                 storagemodel._exists = True
                  
             except Exception as e:
@@ -371,7 +419,30 @@ class StorageBlobContext():
 
     @get_modeldefinition(REGISTERED)
     def download(self, storagemodel:object, modeldefinition = None):
-        """ get the next message in queue """
+        """ load blob from storage into StorageBlobModelInstance """
+
+        if (storagemodel.name is None):
+            # No content to download
+            raise AzureStorageWrapException(storagemodel, "StorageBlobModel does not contain content nor content settings")
+
+        else:
+            container_name = modeldefinition['container']
+            blob_name = storagemodel.name
+            try:
+                if modeldefinition['blobservice'].exists(container_name, blob_name):
+                    """ download blob """
+                    blob = modeldefinition['blobservice'].get_blob_to_bytes(
+                            container_name=modeldefinition['container'], 
+                            blob_name=storagemodel.name
+                        )
+
+                    storagemodel.__mergeblob__(blob)
+                 
+            except Exception as e:
+                msg = 'can not load blob from container {} because {!s}'.format(storagemodel._containername, e)
+                raise AzureStorageWrapException(storagemodel, msg=msg)
+           
+        return storagemodel
 
 
     @get_modeldefinition(REGISTERED)
