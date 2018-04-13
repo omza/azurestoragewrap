@@ -1,4 +1,5 @@
-[![Build Status](https://travis-ci.org/omza/azurestoragewrap.svg?branch=master)](https://travis-ci.org/omza/azurestoragewrap) [![PyPI version shields.io](https://img.shields.io/pypi/v/azurestoragewrap.svg)](https://pypi.org/project/azurestoragewrap/) [![PyPI status](https://img.shields.io/pypi/status/azurestoragewrap.svg)](https://pypi.org/project/azurestoragewrap/)
+[![Build Status](https://travis-ci.org/omza/azurestoragewrap.svg?branch=master)](https://travis-ci.org/omza/azurestoragewrap) [![Coverage Status](https://coveralls.io/repos/github/omza/azurestoragewrap/badge.svg?branch=master)](https://coveralls.io/github/omza/azurestoragewrap?branch=master)
+[![PyPI version shields.io](https://img.shields.io/pypi/v/azurestoragewrap.svg)](https://pypi.org/project/azurestoragewrap/) [![PyPI status](https://img.shields.io/pypi/status/azurestoragewrap.svg)](https://pypi.org/project/azurestoragewrap/) 
 
 # azurestoragewrap
 > A Python Wrapper for modeling client side encrypted azure storage tables, queues and blobs
