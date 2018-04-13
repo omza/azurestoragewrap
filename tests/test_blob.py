@@ -115,10 +115,23 @@ class TestStorageBlobPositive(object):
             bloboneinstance = container.download(BlobOne(name=blob))
             if not bloboneinstance.properties.content_settings.content_encoding is None:
                 blobtext = bloboneinstance.totext()
-                assert blobtext == bloboneinstance.content.decode(bloboneinstance.properties.content_settings.content_encoding, 'ignore') 
+                assert blobtext == bloboneinstance.content.decode(bloboneinstance.properties.content_settings.content_encoding, 'ignore')
+                break
+
+    def test_delete_blob(self):
+        container = StorageBlobContext(**testconfig)
+        container.register_model(BlobOne())
+
+        blobs = container.list(BlobOne())
+        for blob in blobs:
+            log.info(blob)
+            deleted = container.delete(BlobOne(name=blob))            
+            assert deleted
+            break
+                
                                                                                                     
 """ Testcases negative"""
-class TestStorageQueueNegative(object):
+class TestStorageBlobNegative(object):
     """ test if exceptions raised well """
 
     def test_error_file_replace(self):
