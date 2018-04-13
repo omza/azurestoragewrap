@@ -103,10 +103,35 @@ class TestStorageBlobPositive(object):
             log.info(blob)
             bloboneinstance = container.download(BlobOne(name=blob))
             bloboneinstance.tofile(os.path.dirname(__file__),True)
-            assert os.path.isfile(os.path.join(os.path.dirname(__file__), bloboneinstance.filename)) 
+            assert os.path.isfile(os.path.join(os.path.dirname(__file__), bloboneinstance.filename))
+            
+    def test_download_blobs_totext(self):
+        container = StorageBlobContext(**testconfig)
+        container.register_model(BlobOne())
+
+        blobs = container.list(BlobOne())
+        for blob in blobs:
+            log.info(blob)
+            bloboneinstance = container.download(BlobOne(name=blob))
+            if not bloboneinstance.properties.content_settings.content_encoding is None:
+                blobtext = bloboneinstance.totext()
+                assert blobtext == bloboneinstance.content.decode(bloboneinstance.properties.content_settings.content_encoding, 'ignore')
+                break
+
+    def test_delete_blob(self):
+        container = StorageBlobContext(**testconfig)
+        container.register_model(BlobOne())
+
+        blobs = container.list(BlobOne())
+        for blob in blobs:
+            log.info(blob)
+            deleted = container.delete(BlobOne(name=blob))            
+            assert deleted
+            break
+                
                                                                                                     
 """ Testcases negative"""
-class TestStorageQueueNegative(object):
+class TestStorageBlobNegative(object):
     """ test if exceptions raised well """
 
     def test_error_file_replace(self):
@@ -118,6 +143,17 @@ class TestStorageQueueNegative(object):
             bloboneinstance = container.download(BlobOne(name=blob))
             with pytest.raises(AzureStorageWrapException):
                 bloboneinstance.tofile(os.path.dirname(__file__))
+
+    def test_error_text_encoding(self):
+        container = StorageBlobContext(**testconfig)
+        container.register_model(BlobOne())
+
+        blobs = container.list(BlobOne())
+        for blob in blobs:
+            bloboneinstance = container.download(BlobOne(name=blob))
+            bloboneinstance.properties.content_settings.content_encoding = None
+            with pytest.raises(AzureStorageWrapException):
+                blobtext = bloboneinstance.totext()
 
 
 """ Testcases Housekeeping"""

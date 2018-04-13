@@ -194,11 +194,19 @@ class StorageBlobModel(Blob):
         with open(path_to_file, "wb") as out_file:
             out_file.write(self.content)
 
+        return path_to_file
+
     def totext(self) ->str:
         """ 
         return blob content from StorageBlobModel instance to a string. Parameters are:
         """
-        return str(self.content)
+        sreturn = ''
+        if self.properties.content_settings.content_encoding is None:
+            raise AzureStorageWrapException(self, 'can not convert blob {!s} to text because content_encoding is not given'.format(self.name))
+        else:
+            sreturn = self.content.decode(self.properties.content_settings.content_encoding, 'ignore')
+
+        return sreturn
 
 
 
@@ -444,11 +452,26 @@ class StorageBlobContext():
            
         return storagemodel
 
-
     @get_modeldefinition(REGISTERED)
     def delete(self, storagemodel:object, modeldefinition = None) -> bool:
-        """ delete the message in queue """
+        """ delete the blob from storage """
         deleted = False
+
+        blobservice = modeldefinition['blobservice']
+        container_name = modeldefinition['container']
+        blob_name = storagemodel.name
+
+        try:
+            if blobservice.exists(container_name, blob_name):
+
+                """ delete """
+                blob = blobservice.delete_blob(container_name, blob_name)
+                deleted = True
+                 
+        except Exception as e:
+            msg = 'can not delete blob {} from storage because {!s}'.format(blob_name, e)
+            raise AzureStorageWrapException(storagemodel, msg=msg)
+          
 
         return deleted
 

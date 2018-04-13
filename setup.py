@@ -137,7 +137,7 @@ setup(
     # https://docs.pytest.org/en/latest/goodpractices.html
 
     setup_requires=['pytest-runner'],
-      tests_require=['pytest'],
+      tests_require=['pytest', 'pytest-cov', 'coveralls'],
 
 
     # List additional groups of dependencies here (e.g. development
