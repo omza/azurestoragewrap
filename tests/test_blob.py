@@ -23,17 +23,21 @@ from azurestoragewrap.blob import StorageBlobContext, StorageBlobModel
 from azurestoragewrap.exception import NameConventionError, AzureStorageWrapException
 
 """ imports & Globals """
-import time, os
+import time, os, datetime
 import pytest
 
 class BlobOne(StorageBlobModel):
     _encrypt = True
     _containername = 'blobtest'
+    _dateformat = '%d.%m.%Y'
+    _datetimeformat = '%d.%m.%Y %H:%M:%S'
 
     user = ''
     password = ''
     server = ''
     protocol = ''
+    beginn = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
+    ende  = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
 
 
 """ Testcases positiv"""

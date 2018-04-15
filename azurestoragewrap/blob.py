@@ -46,6 +46,8 @@ class StorageBlobModel(Blob):
             self._containername = self.__class__._containername
 
         self._encrypt = self.__class__._encrypt
+        self._dateformat = self.__class__._dateformat
+        self._datetimeformat = self.__class__._datetimeformat
                
         """ generate a uuid as blobname: if parameter blobname is None generate a UUID as blobname """
         name = kwargs.get('name', None)
@@ -88,21 +90,32 @@ class StorageBlobModel(Blob):
         image['filename'] = self.filename 
         for key, default in vars(self.__class__).items():
             if not key.startswith('_') and key !='' and (not key in vars(Blob).items()):                                      
-                image[key] = getattr(self, key, default)
+                if isinstance(default, datetime.date):
+                    image[key] = safe_cast(getattr(self, key, default), str, dformat=self._dateformat)
+                if isinstance(default, datetime.datetime):
+                    image[key] = safe_cast(getattr(self, key, default), str, dformat=self._datetimeformat)
+                else:
+                    image[key] = getattr(self, key, default)
                
         self.metadata = image
 
     def __mergeblob__(self, message):
         """ parse Blob Instance in Model vars """
         if isinstance(message, Blob):
-            """ merge queue message vars """
+            """ merge blob metadata vars """
             for key, value in vars(message).items():
                 if not value is None:
                     setattr(self, key, value)
                     if (key == 'metadata'):
-                        for metakey, metavalue in value.items():
-                            if metakey in vars(self):
-                                setattr(self, metakey, metavalue)
+                        for metakey, metavalue in message.metadata.items():
+                            default = getattr(self, metakey, None)
+                            if not default is None:
+                                if isinstance(default, datetime.date):
+                                    setattr(self, metakey, safe_cast(metavalue, datetime.date, dformat=self._dateformat))
+                                if isinstance(default, datetime.datetime):
+                                    setattr(self, metakey, safe_cast(metavalue, datetime.date, dformat=self._datetimeformat))
+                                else:
+                                    setattr(self, metakey, metavalue) 
 
     def fromfile(self, path_to_file, mimetype=None):
         """ 

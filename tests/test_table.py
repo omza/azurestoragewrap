@@ -27,14 +27,20 @@ from azurestoragewrap.table import StorageTableModel, StorageTableContext, Stora
 from azurestoragewrap.exception import NameConventionError, ModelRegisteredMoreThanOnceError, ModelNotRegisteredError
 
 # pytest
-import time
+import time, datetime
 import pytest
 
 
 """ define table test models """
 class TableOne(StorageTableModel):
+    _dateformat = '%d.%m.%Y'
+    _datetimeformat = '%d.%m.%Y %H:%M:%S'
+
     Id = PartitionKey(0) #You have to define one Property as PartitionKey (Part of Azure Storage Table Primary Key) with a default Value
     Id2 = RowKey('')     #You have to define one Property as RowKey (Part of Azure Storage Table Primary Key) with a default Value
+    beginn = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
+    ende  = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
+
 
 class TableTwo(StorageTableModel):
     Id = PartitionKey('')

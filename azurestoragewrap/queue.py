@@ -63,8 +63,13 @@ class StorageQueueModel(QueueMessage):
         """ parse self into unicode string as message content """   
         image = {}
         for key, default in vars(self.__class__).items():
-            if not key.startswith('_') and key !='':                                      
-                image[key] = getattr(self, key, default)                                  
+            if not key.startswith('_') and key !='' and (not key in vars(QueueMessage).items()):                                      
+                if isinstance(default, datetime.date):
+                    image[key] = safe_cast(getattr(self, key, default), str, dformat=self._dateformat)
+                if isinstance(default, datetime.datetime):
+                    image[key] = safe_cast(getattr(self, key, default), str, dformat=self._datetimeformat)
+                else:
+                    image[key] = getattr(self, key, default)                              
         return str(image)
 
     def mergemessage(self, message):
@@ -72,17 +77,20 @@ class StorageQueueModel(QueueMessage):
         if isinstance(message, QueueMessage):
             """ merge queue message vars """
             for key, value in vars(message).items():
-                setattr(self, key, value)
-
-            """ parse message content """
-            try:
-                content = literal_eval(message.content)
-                for key, value in content.items():
+                if not value is None:
                     setattr(self, key, value)
+                    if (key == 'content'):
+                        content = literal_eval(message.content)
+                        for metakey, metavalue in content.items():
+                            default = getattr(self, metakey, None)
+                            if not default is None:
+                                if isinstance(default, datetime.date):
+                                    setattr(self, metakey, safe_cast(metavalue, datetime.date, dformat=self._dateformat))
+                                if isinstance(default, datetime.datetime):
+                                    setattr(self, metakey, safe_cast(metavalue, datetime.date, dformat=self._datetimeformat))
+                                else:
+                                    setattr(self, metakey, metavalue) 
 
-            except:
-                log.exception('cant parse message {} into attributes.'.format(message.content))
-        pass
 
 """ wrapper classes """
 class StorageQueueContext():

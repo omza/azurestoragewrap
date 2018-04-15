@@ -23,15 +23,19 @@ from azurestoragewrap.queue import StorageQueueContext, StorageQueueModel
 from azurestoragewrap.exception import NameConventionError
 
 """ imports & Globals """
-import time
+import time, datetime
 import pytest
 
 class QueueOne(StorageQueueModel):
+    _dateformat = '%d.%m.%Y'
+    _datetimeformat = '%d.%m.%Y %H:%M:%S'
 
     epgid = 0
     resolution = ''
     sourcefile = ''
     sourcelink = ''
+    beginn = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
+    ende  = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
 
 
 class QueueTwo(StorageQueueModel):
