@@ -97,11 +97,12 @@ class StorageBlobModel(Blob):
         if isinstance(message, Blob):
             """ merge queue message vars """
             for key, value in vars(message).items():
-                setattr(self, key, value)
-                if key == 'metadata':
-                    for metakey, metavalue in value.items():
-                        if metakey in vars(self):
-                            setattr(self, metakey, metavalue)
+                if not value is None:
+                    setattr(self, key, value)
+                    if (key == 'metadata'):
+                        for metakey, metavalue in value.items():
+                            if metakey in vars(self):
+                                setattr(self, metakey, metavalue)
 
     def fromfile(self, path_to_file, mimetype=None):
         """ 
@@ -208,10 +209,12 @@ class StorageBlobModel(Blob):
 
         return sreturn
 
-
-
-
-
+    def exists(self)->bool:
+        """ returns a flag that indicates if the blob is in storage or not """
+        if self.properties.etag is None:
+            return None
+        else:
+            return True
 
 
 """ wrapper classes """
@@ -242,7 +245,7 @@ class StorageBlobContext():
 
                 """ modeldefinition already determined """
                 if not modeldefinition is None:
-                    return func(self, storageobject, modeldefinition, *args, **kwargs)
+                    return func(self, storagemodel, modeldefinition, *args, **kwargs)
             
                 """ find modeldefinition for StorageQueueModel or StorageQueueModel """
                 if isinstance(storagemodel, StorageBlobModel):
@@ -403,21 +406,25 @@ class StorageBlobContext():
             raise AzureStorageWrapException(storagemodel, "StorageBlobModel does not contain content nor content settings")
 
         else:
+            blobservice = modeldefinition['blobservice']
+            container_name = modeldefinition['container']
+            blob_name = storagemodel.name
+
             try:
+
                 # refresh metadata
                 storagemodel.__instance_to_metadata__()
 
-
                 """ upload bytes """
-                modeldefinition['blobservice'].create_blob_from_bytes(
-                        container_name=modeldefinition['container'], 
-                        blob_name=storagemodel.name, 
+                blobservice.create_blob_from_bytes(
+                        container_name=container_name, 
+                        blob_name=blob_name, 
                         blob=storagemodel.content, 
                         metadata=storagemodel.metadata, 
                         content_settings=storagemodel.properties.content_settings
                     )
 
-                storagemodel._exists = True
+                storagemodel.properties = blobservice.get_blob_properties(container_name=container_name, blob_name=blob_name).properties
                  
             except Exception as e:
                 msg = 'can not save blob in container {} because {!s}'.format(storagemodel._containername, e)
@@ -471,19 +478,42 @@ class StorageBlobContext():
         except Exception as e:
             msg = 'can not delete blob {} from storage because {!s}'.format(blob_name, e)
             raise AzureStorageWrapException(storagemodel, msg=msg)
-          
 
         return deleted
 
     @get_modeldefinition(REGISTERED)
-    def list(self, storagemodel:object, modeldefinition = None) ->list:
+    def exists(self, storagemodel:object, modeldefinition = None) -> bool:
+        """ delete the blob from storage """
+        exists = False
+
+        blobservice = modeldefinition['blobservice']
+        container_name = modeldefinition['container']
+        blob_name = storagemodel.name
+
+        try:
+            blobs = self.list(storagemodel, modeldefinition, where=storagemodel.name)
+            if len(blobs) == 1:
+                storagemodel.__mergeblob__(blobs[0])
+                exists = True
+                 
+        except Exception as e:
+            msg = 'can not retireve blob {} from storage because {!s}'.format(blob_name, e)
+            raise AzureStorageWrapException(storagemodel, msg=msg)
+
+        return exists
+
+    @get_modeldefinition(REGISTERED)
+    def list(self, storagemodel:object, modeldefinition = None, where=None) ->list:
         """ list blob messages in container """
         try:
             blobnames = []
+            if where is None:
+                generator = modeldefinition['blobservice'].list_blobs(modeldefinition['container'])
+            else:
+                generator = modeldefinition['blobservice'].list_blobs(modeldefinition['container'], prefix=where)
 
-            generator = modeldefinition['blobservice'].list_blobs(modeldefinition['container'])
             for blob in generator:
-                blobnames.append(blob.name)
+                blobnames.append(blob)
 
         except Exception as e:
             msg = 'can not list blobs in container {} because {!s}'.format(storagemodel._containername, e)

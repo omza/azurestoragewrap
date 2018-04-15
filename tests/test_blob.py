@@ -59,7 +59,7 @@ class TestStorageBlobPositive(object):
         blob.fromtext('Test Blob')
         container.upload(blob)
 
-        assert blob.user == 'bla' and blob.content == b'Test Blob'
+        assert blob.user == 'bla' and blob.content == b'Test Blob' and blob.exists()
 
     def test_upload_file(self):
         container = StorageBlobContext(**testconfig)
@@ -72,7 +72,7 @@ class TestStorageBlobPositive(object):
 
         container.upload(blob)
 
-        assert blob.user == 'bla'
+        assert blob.user == 'bla' and blob.exists()
 
     def test_list_blobs(self):
         container = StorageBlobContext(**testconfig)
@@ -80,7 +80,7 @@ class TestStorageBlobPositive(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            log.info(blob)
+            log.info(blob.name)
 
         assert len(blobs) == 2
 
@@ -90,9 +90,9 @@ class TestStorageBlobPositive(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            log.info(blob)
-            bloboneinstance = container.download(BlobOne(name=blob))
-            assert bloboneinstance.content != None
+            log.info(blob.name)
+            bloboneinstance = container.download(BlobOne(name=blob.name))
+            assert bloboneinstance.content != None  and bloboneinstance.exists()
             
     def test_download_blobs_tofile(self):
         container = StorageBlobContext(**testconfig)
@@ -100,8 +100,8 @@ class TestStorageBlobPositive(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            log.info(blob)
-            bloboneinstance = container.download(BlobOne(name=blob))
+            log.info(blob.name)
+            bloboneinstance = container.download(BlobOne(name=blob.name))
             bloboneinstance.tofile(os.path.dirname(__file__),True)
             assert os.path.isfile(os.path.join(os.path.dirname(__file__), bloboneinstance.filename))
             
@@ -111,12 +111,23 @@ class TestStorageBlobPositive(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            log.info(blob)
-            bloboneinstance = container.download(BlobOne(name=blob))
+            log.info(blob.name)
+            bloboneinstance = container.download(BlobOne(name=blob.name))
             if not bloboneinstance.properties.content_settings.content_encoding is None:
                 blobtext = bloboneinstance.totext()
                 assert blobtext == bloboneinstance.content.decode(bloboneinstance.properties.content_settings.content_encoding, 'ignore')
                 break
+
+    def test_blob_exists(self):
+
+        container = StorageBlobContext(**testconfig)
+        container.register_model(BlobOne())
+        blobs = container.list(BlobOne())
+        
+        for blob in blobs:
+            exists = container.exists(BlobOne(name=blob.name))            
+            assert exists
+            break
 
     def test_delete_blob(self):
         container = StorageBlobContext(**testconfig)
@@ -124,8 +135,8 @@ class TestStorageBlobPositive(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            log.info(blob)
-            deleted = container.delete(BlobOne(name=blob))            
+            log.info(blob.name)
+            deleted = container.delete(BlobOne(name=blob.name))            
             assert deleted
             break
                 
@@ -140,7 +151,7 @@ class TestStorageBlobNegative(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            bloboneinstance = container.download(BlobOne(name=blob))
+            bloboneinstance = container.download(BlobOne(name=blob.name))
             with pytest.raises(AzureStorageWrapException):
                 bloboneinstance.tofile(os.path.dirname(__file__))
 
@@ -150,7 +161,7 @@ class TestStorageBlobNegative(object):
 
         blobs = container.list(BlobOne())
         for blob in blobs:
-            bloboneinstance = container.download(BlobOne(name=blob))
+            bloboneinstance = container.download(BlobOne(name=blob.name))
             bloboneinstance.properties.content_settings.content_encoding = None
             with pytest.raises(AzureStorageWrapException):
                 blobtext = bloboneinstance.totext()
