@@ -351,8 +351,9 @@ class StorageQueueContext():
                 storagemodel = None
                 raise AzureStorageWrapException(msg=msg)
         else:
-            log.info('cant update queuemessage {} due to missing id and pop_receipt'.format(modelname))
+            msg = 'cant update queuemessage in {!s} due to missing id {!s} and/or pop_receipt {!s}'.format(storagemodel._queuename, storagemodel.id, storagemodel.pop_receipt)
             storagemodel = None
+            raise AzureStorageWrapException(msg=msg)
 
         return storagemodel
 

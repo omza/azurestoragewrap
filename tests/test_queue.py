@@ -20,7 +20,7 @@ log = logging.getLogger('azurestoragewrap')
 
 """ Import application azurestoragewrap.table """        
 from azurestoragewrap.queue import StorageQueueContext, StorageQueueModel
-from azurestoragewrap.exception import NameConventionError
+from azurestoragewrap.exception import NameConventionError, AzureStorageWrapException
 
 """ imports & Globals """
 import time, datetime
@@ -153,6 +153,24 @@ class TestStorageQueuePositive(object):
         testmessage = queue.get(QueueTwo())
         queue.delete(testmessage)
 
+    def test_update_nothide(self):
+        queue = StorageQueueContext(**testconfig)
+        queue.register_model(QueueOne())        
+        message = QueueOne(epgid = 1, resolution = 'test_get_nothide')
+        queue.put(message)
+
+        getmessage = queue.get(QueueOne(), hide=1)
+        assert getmessage.epgid == 1 and getmessage.resolution == 'test_get_nothide'
+
+        time.sleep(1)
+
+        getmessage.epgid = 999
+
+        testmessage = queue.update(getmessage)
+        assert testmessage.epgid == 999 and getmessage.resolution == 'test_get_nothide'
+
+        queue.delete(testmessage)
+
 """ Testcases negative"""
 class TestStorageQueueNegative(object):
     """ test if exceptions raised well """
@@ -161,6 +179,16 @@ class TestStorageQueueNegative(object):
         queue = StorageQueueContext(**testconfig)
         with pytest.raises(NameConventionError):
             queue.register_model(QueueThree())
+
+    def test_update_nopop(self):
+        queue = StorageQueueContext(**testconfig)
+        queue.register_model(QueueOne())        
+        message = QueueOne(epgid = 1, resolution = 'test_get_nothide')
+        queue.put(message)
+        message.pop_receipt = None
+        with pytest.raises(AzureStorageWrapException):
+            updatemessage = queue.update(message)
+
 
 
 """ Testcases Housekeeping"""

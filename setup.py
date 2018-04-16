@@ -26,7 +26,7 @@ README = 'Inspired by the implementation of data modeling in [SQLAlchemy](https:
  
 major = 0
 minor = 2
-micro = 12
+micro = 14
 azurestoragewraprelease = '{!s}.{!s}.{!s}'.format(major,minor,micro)
 
 
