@@ -121,20 +121,6 @@ class StorageTableModel(object):
         """
         pass
 
-    def dict(self) -> dict:        
-        """ parse self into dictionary """
-     
-        image = {}
-
-        for key, value in vars(self).items():
-            if not key.startswith('_') and key !='':
-                """ if key in ['PartitionKey', 'RowKey']:
-                    image[key] = str(value)
-                else:"""
-                image[key] = value
-        
-        return image
-
     def entity(self) -> dict:        
         """ parse self into dictionary """    
         image = {}
@@ -460,6 +446,7 @@ class StorageTableContext():
         except AzureMissingResourceHttpError as e:
             storagemodel._exists = False
             log.debug('can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
+
         except Exception as e:
             storagemodel._exists = False
             msg = 'can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e)
