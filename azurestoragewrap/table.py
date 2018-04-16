@@ -109,8 +109,8 @@ class StorageTableModel(object):
                                                  query._pkcondition,
                                                  pkwhere,
                                                  query._rkcondition,
-                                                 rkwhere,
-                                                 query._select))
+                                                 rkwhere))
+                                                 #, query._select))
 
 
     # Define the encryption resolver_function.
@@ -156,23 +156,26 @@ class StorageTableQuery(list):
     _pkforeignkey= ''
     _rkforeignkey= ''    
 
-    def __init__(self, storagemodel=None, pkcondition='', pkforeignkey = '', rkcondition = '', rkforeignkey='', select = None):
+    def __init__(self, storagemodel=None, pkcondition='', pkforeignkey = '', rkcondition = '', rkforeignkey=''):
 
         """ set storagemodel """
         self._storagemodel = storagemodel
         
         """ set select """
-        if (not self._select is None) and (self._select != '') and (not self._storagemodel is None):
-            """ parse select statement into self._select """
-            for key, value in vars(self).items():
-                if not key.startswith('_') and key !='':
-                    if type(value) in [str, int, bool, datetime.date, datetime.datetime]:
-                        if select.find(key) >= 0:
-                            if (not self._select is None) or (self._select != ''):
-                                self._select += ', '
-                            self._select += key
-        else:
-            self._select = None
+        self._select = None
+
+        """ 
+        to be done: parse select statement into self._select 
+            if (isinstance(select,list)) and (select != []) and (not self._storagemodel is None):
+                self._select = ''
+                for key in select:
+                    if key in vars(self._storagemodel):
+                        if (self._select != ''):
+                            self._select += ', '
+                        self._select += key
+            else:
+                self._select = None
+        """
            
         """ query configuration """
         self._pkcondition = pkcondition
@@ -501,7 +504,7 @@ class StorageTableContext():
     @get_modeldefinition(REQUIRED)
     def query(self, storagequery, modeldefinition) -> StorageTableQuery:
         try:
-            if not storagequery._select is None:
+            if (not storagequery._select is None) and (storagequery._select != ''):
                 storagequery.extend(modeldefinition['tableservice'].query_entities(modeldefinition['tablename'],filter=storagequery._queryfilter, select=storagequery._select))
             else:
                 storagequery.extend(modeldefinition['tableservice'].query_entities(modeldefinition['tablename'],filter=storagequery._queryfilter))

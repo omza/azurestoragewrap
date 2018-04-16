@@ -147,6 +147,17 @@ class TestStorageTablePositive(object):
         db.insert(model)
         assert model.TableName == True
 
+    """def test_query_select(self):
+        db = StorageTableContext(**testconfig)
+        db.register_model(TableTwo())
+
+        for x in range(1,11):
+            db.insert(TableTwo(Id='First', Id2 = x, Secret='Secret', NonSecret='NonSecret'))
+
+        query = StorageTableQuery(TableTwo(),'eq','First','eq', 1, ['Secret','NonSecret'])
+        query = db.query(query)
+        assert len(query) == 1"""
+
  # Testcases negative
 class TestStorageTableNegative(object):
 
