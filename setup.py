@@ -9,7 +9,6 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
-from coveralls import Coveralls
 
 here = path.abspath(path.dirname(__file__))
 
@@ -26,7 +25,7 @@ README = 'Inspired by the implementation of data modeling in [SQLAlchemy](https:
  
 major = 0
 minor = 2
-micro = 14
+micro = 15
 azurestoragewraprelease = '{!s}.{!s}.{!s}'.format(major,minor,micro)
 
 
@@ -93,7 +92,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
