@@ -214,9 +214,103 @@ except Exception as e:
 
 Azure Blob storage is a service for storing large amounts of unstructured object data, such as text or binary data - e.g. to serve images or documents directly to a browser.
 
-With the parameter above you can create a new StorageTableContext Instance to initiate an Azure Connection:
+To start working with Blobs quite similar to Queues. First you have to model the properties by subclassing StorageBlobModel. Like StorageQueues messages, a blob can only be encrypted client-side completely. 
+Therefore, the encryption will be configured for the entire StorageBlobModel by set '_encrypt=True' and not on the property level like in StorageTableModel. The custom properties you like to define in your model will be stored in azure as cutom blob metadata. 
+Therefor the content of a property is limited to 8Kb.
 ```
-Give an example
+#Model with encryption
+class BlobOne(StorageQueueModel):
+    _encrypt = True
+    _containername = 'encryptedtest'
+    user = ''
+    password = ''
+    server = ''
+    protocol = ''
+
+# Model without encryption
+class BlobTwo(StorageBlobModel):
+    epgid = 0
+    statuscode = 1
+	statusmessage = 'New'
+```
+After modeling your StorageBlobModels you have create a StorageBlobContext instance with the Parameter mentioned above and register the models in this instance. 
+```
+container = StorageBlobContext(
+	AZURE_STORAGE_NAME, 
+	AZURE_STORAGE_KEY,
+	AZURE_STORAGE_IS_EMULATED
+	AZURE_KEY_IDENTIFIER',
+	AZURE_SECRET_KEY
+	)
+
+# Register StorageQueueModels like this:
+container.register_model(BlobTwo())
+container.register_model(BlobOne())
+```
+Now you are able to upload a Blob to Azure like this:
+```
+# container.upload()
+# 
+blob = BlobOne(name = 'blob_from_text',
+			user='bla', 
+            password='blabla', 
+            server='blablabla', 
+            protocol='sbla')
+
+# add the blob content from a text
+blob.fromtext('Test Blob')
+
+container.upload(blob)
+
+# or
+blob = BlobOne(name = 'blob_from_file',
+			user='bla', 
+            password='blabla', 
+            server='blablabla', 
+            protocol='sbla')
+
+# add the blob content from a local file
+path_to_file = os.path.join(os.path.dirname(__file__), 'oliver.jpg') # e.g.
+blob.fromfile(path_to_file)
+
+container.upload(blob)
+
+# thats it
+```
+of cause you like to download a uloaded Blob as well:
+```
+# container.download()
+# 
+blob = BlobOne(name = 'blob_from_text')
+container.download(blob)
+
+# download blob content to a text
+content = blob.totext()
+
+# or
+blob = BlobOne(name = 'blob_from_file')
+container.download(blob)
+
+# download blob content to local path or file
+blob.tofile(os.path.dirname(__file__),True)
+
+# thats it
+```
+If you want to retrieve a list of Blobs in type of StorageBlobModel you can easily like this:
+```
+# container.list()
+# 
+blobs = container.list(BlobOne())
+for blob in blobs:
+    log.info(blob.name)
+```
+or if you want to delete a blob, just do it like this:
+```
+# container.delete()
+# 
+blob = BlobOne(name = 'blob_from_file')
+if container.delete(blob):
+	print('blob {!s} is deleted'.format(blob.name))
 ```
 
 ## Meta
