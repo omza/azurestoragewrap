@@ -406,8 +406,9 @@ class StorageTableContext():
             
             except AzureMissingResourceHttpError:
                 storagemodel._exists = False
+
             except Exception as e:
-                msg = 'failed to create {} with error {}'.format(tablename, e)
+                msg = 'failed to test {} with error {}'.format(modeldefinition['tablename'], e)
                 raise AzureStorageWrapException(msg=msg)
         else:
             exists = storagemodel._exists
