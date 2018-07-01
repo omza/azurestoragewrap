@@ -28,6 +28,7 @@ class PartitionKey(object):
     def __init__(self, default):
         self._default = default
         self._type = type(default)
+
 class RowKey(object):
     def __init__(self, default):
         self._default = default
@@ -37,7 +38,6 @@ class EncryptKey(object):
     def __init__(self, default):
         self._default = default
         self._type = type(default)
-
 
 class StorageTableModel(object):
     _tablename = ''
@@ -137,7 +137,7 @@ class StorageTableModel(object):
 
     def RowKey(self) -> str:
         return str(getattr(self, self._RowKey))
-
+ 
 class StorageTableQuery(list):
     """ Initialized a query your azure storage to implement a model relationship by Partition- and/or RowKey
 
@@ -207,7 +207,6 @@ class StorageTableQuery(list):
         self.clear()
         self.extend(resultset)
     pass
-
 
 """ wrapper classes """
 class StorageTableContext():

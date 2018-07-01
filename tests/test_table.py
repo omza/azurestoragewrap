@@ -66,6 +66,19 @@ class TableNameConventionError(StorageTableModel):
     Id = PartitionKey(0)
     Id2 = RowKey('')
 
+class Table5(StorageTableModel):
+    _dateformat = '%d.%m.%Y'
+    _datetimeformat = '%d.%m.%Y %H:%M:%S'
+
+    PartitionKey = PartitionKey(0)
+    RowKey = RowKey('')
+    Id = 0 #You have to define one Property as PartitionKey (Part of Azure Storage Table Primary Key) with a default Value
+    Id2 = 'Test5'     #You have to define one Property as RowKey (Part of Azure Storage Table Primary Key) with a default Value
+    beginn = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
+    ende  = datetime.datetime.strptime('01.01.1900 00:00:00', _datetimeformat)
+
+
+
 
 """ Testcases positiv"""
 class TestStorageTablePositive(object):
@@ -157,6 +170,25 @@ class TestStorageTablePositive(object):
         query = StorageTableQuery(TableTwo(),'eq','First','eq', 1, ['Secret','NonSecret'])
         query = db.query(query)
         assert len(query) == 1"""
+
+    def test_PartitionKeyAttribute(self):
+        db = StorageTableContext(**testconfig)
+        db.register_model(Table5())
+        testentity = Table5(
+            PartitionKey = 1,
+            RowKey = '2',
+            Id=1, 
+            Id2 ='test_insert_entry',
+            beginn = datetime.datetime.now(),
+            ende = datetime.datetime.now()
+        )
+        
+        testentity = db.insert(testentity)
+        assert testentity._exists 
+        assert db.exists(testentity)
+        #db.delete(testentity)
+
+
 
  # Testcases negative
 class TestStorageTableNegative(object):
