@@ -176,7 +176,7 @@ class TestStorageTablePositive(object):
         db.register_model(Table5())
         testentity = Table5(
             PartitionKey = 1,
-            RowKey = '2',
+            RowKey = 'Test2',
             Id=1, 
             Id2 ='test_insert_entry',
             beginn = datetime.datetime.now(),
@@ -184,9 +184,19 @@ class TestStorageTablePositive(object):
         )
         
         testentity = db.insert(testentity)
+
+        log.debug(testentity.entity())
+
         assert testentity._exists 
         assert db.exists(testentity)
-        #db.delete(testentity)
+
+        testentity = Table5(PartitionKey = 1, RowKey = 'Test2')
+        log.debug(testentity.entity())
+
+        testentity = db.get(testentity)
+        assert testentity.Id == 1  and testentity.Id2 == 'test_insert_entry'
+
+        db.delete(testentity)
 
 
 
@@ -233,5 +243,10 @@ class TestStorageTableHousekeeping(object):
         db.register_model(modeldef)
         db.unregister_model(modeldef, None, True)
         assert not 'Table4' in [model['modelname'] for model in db._modeldefinitions]
+
+        modeldef = Table5()
+        db.register_model(modeldef)
+        db.unregister_model(modeldef, None, True)
+        assert not 'Table5' in [model['modelname'] for model in db._modeldefinitions]
 
 

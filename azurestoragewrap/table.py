@@ -30,7 +30,7 @@ class PartitionKey(object):
         self._type = type(default)
 
 class RowKey(object):
-    def __init__(self, default):
+    def __init__(self, default, transformation=None):
         self._default = default
         self._type = type(default)
 
@@ -124,18 +124,18 @@ class StorageTableModel(object):
     def entity(self) -> dict:        
         """ parse self into dictionary """    
         image = {}
-        image['PartitionKey'] = str(getattr(self, self._PartitionKey))
-        image['RowKey'] = str(getattr(self, self._RowKey))
+        image['PartitionKey'] = self.getPartitionKey()
+        image['RowKey'] = self.getRowKey()
         for key, value in vars(self).items():
-            if not key.startswith('_') and key !='':
+            if not key.startswith('_') and key not in ['','PartitionKey','RowKey']:
                 if type(value) in [str, int, bool, datetime.date, datetime.datetime]:
                     image[key] = value                    
         return image
 
-    def PartitionKey(self) -> str:
+    def getPartitionKey(self) -> str:
         return str(getattr(self, self._PartitionKey))
 
-    def RowKey(self) -> str:
+    def getRowKey(self) -> str:
         return str(getattr(self, self._RowKey))
  
 class StorageTableQuery(list):
@@ -399,7 +399,10 @@ class StorageTableContext():
         exists = False
         if storagemodel._exists is None:
             try:
-                entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey())
+                pk = storagemodel.getPartitionKey()
+                rk = storagemodel.getRowKey()
+
+                entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], pk, rk)
                 storagemodel._exists = True
                 exists = True
             
@@ -418,7 +421,10 @@ class StorageTableContext():
     def get(self, storagemodel, modeldefinition) -> StorageTableModel:
         """ load entity data from storage to vars in self """
         try:
-            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey())
+            pk = storagemodel.getPartitionKey()
+            rk = storagemodel.getRowKey()
+
+            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], pk, rk)
             storagemodel._exists = True
         
             """ sync with entity values """
@@ -429,11 +435,11 @@ class StorageTableContext():
                         setattr(storagemodel, key, value)
              
         except AzureMissingResourceHttpError as e:
-            log.debug('can not get table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
+            log.debug('can not get table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], pk, rk, e))
             storagemodel._exists = False
 
         except Exception as e:
-            msg = 'can not get table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e)
+            msg = 'can not get table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], pk, rk, e)
             raise AzureStorageWrapException(msg=msg)
 
         finally:
@@ -448,7 +454,7 @@ class StorageTableContext():
 
         except AzureMissingResourceHttpError as e:
             storagemodel._exists = False
-            log.debug('can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
+            log.debug('can not insert or replace table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.getPartitionKey(), storagemodel.getRowKey(), e))
 
         except Exception as e:
             storagemodel._exists = False
@@ -462,7 +468,10 @@ class StorageTableContext():
     def merge(self, storagemodel, modeldefinition) -> StorageTableModel:
         """ try to merge entry """
         try:
-            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey())
+
+            pk = storagemodel.getPartitionKey()
+            rk = storagemodel.getRowKey()
+            entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], pk, rk)
         
             """ merge with entity values """
             for key, default in vars(storagemodel.__class__).items():
@@ -480,10 +489,10 @@ class StorageTableContext():
             storagemodel._exists = True
 
         except AzureMissingResourceHttpError as e:
-            log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey(), storagemodel.RowKey(), e))
+            log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], pk, rk, e))
 
         except Exception as e:
-            log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
+            log.debug('can not merge table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], pk, rk, e))
 
         finally:
             return storagemodel
@@ -491,12 +500,16 @@ class StorageTableContext():
     @get_modeldefinition(REQUIRED)
     def delete(self,storagemodel, modeldefinition):
         """ delete existing Entity """
+
+        pk = storagemodel.getPartitionKey()
+        rk = storagemodel.getRowKey()
+
         try:
-            modeldefinition['tableservice'].delete_entity(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey)
+            modeldefinition['tableservice'].delete_entity(modeldefinition['tablename'], pk, rk)
             storagemodel._exists = False
 
         except AzureMissingResourceHttpError as e:
-            log.debug('can not delete table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], storagemodel.PartitionKey, storagemodel.RowKey, e))
+            log.debug('can not delete table entity:  Table {}, PartitionKey {}, RowKey {} because {!s}'.format(modeldefinition['tablename'], pk, rk, e))
 
         finally:
             return storagemodel
