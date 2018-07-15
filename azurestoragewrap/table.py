@@ -230,42 +230,38 @@ class StorageTableContext():
     _modeldefinitions = []
     REQUIRED = True
 
-    """ decorators """
-    def get_modeldefinition(required=False):
-        def wrap(func):
-            @wraps(func)
-            def wrapper(self, storageobject, modeldefinition=None, *args, **kwargs):
+    # decorators
+    def getmodeldefinition(self, storageobject, required=False):
 
-                """ modeldefinition already determined """
-                if not modeldefinition is None:
-                    return func(self, storageobject, modeldefinition, *args, **kwargs)
-            
-                """ find modeldefinition for StorageTableModel or StorageTableQuery """
-                if isinstance(storageobject, StorageTableModel):
-                    definitionlist = [definition for definition in self._modeldefinitions if definition['modelname'] == storageobject.__class__.__name__]
+        """ find modeldefinition for StorageTableModel or StorageTableQuery """
+        if isinstance(storageobject, StorageTableModel):
+            definitionlist = [definition for definition in self._modeldefinitions if definition['modelname'] == storageobject.__class__.__name__]
      
-                elif isinstance(storageobject, StorageTableQuery):
-                    """ StorageTableQuery """
-                    storagemodel = storageobject._storagemodel
-                    definitionlist = [definition for definition in self._modeldefinitions if definition['modelname'] == storagemodel.__class__.__name__]
-                else:
-                    raise Exception("Argument is not an StorageTableModel nor an StorageTableQuery")
+        elif isinstance(storageobject, StorageTableQuery):
+            """ StorageTableQuery """
+            storagemodel = storageobject._storagemodel
+            definitionlist = [definition for definition in self._modeldefinitions if definition['modelname'] == storagemodel.__class__.__name__]
+        else:
+            raise Exception("Argument is not an StorageTableModel nor an StorageTableQuery")
+                                                                            
+        # is there only one modeldefinition ?
+        # hopefully!
+        modeldefinition = None
+
+        if len(definitionlist) == 1:
+            modeldefinition = definitionlist[0]
+
+        elif len(definitionlist) > 1:
+            raise ModelRegisteredMoreThanOnceError(storageobject)
+
+        # is there a modeldefinition if required ?
+        if required and modeldefinition is None:
+            raise ModelNotRegisteredError(storageobject)
+
+        return modeldefinition
 
 
-                if len(definitionlist) == 1:
-                    modeldefinition = definitionlist[0]
-
-                elif len(definitionlist) > 1:
-                    raise ModelRegisteredMoreThanOnceError(storageobject)
-
-                if required and (not isinstance(modeldefinition, dict)):
-                    raise ModelNotRegisteredError(storageobject)
-
-                return func(self, storageobject, modeldefinition, *args, **kwargs)
-
-            return wrapper
-        return wrap
-
+    # constructor 
     def __init__(self, **kwargs):
         """ parse kwargs """
         self._account_name = kwargs.get('AZURE_STORAGE_NAME', '')
@@ -285,7 +281,7 @@ class StorageTableContext():
             raise AzureException
 
         """ init table model list """
-        self._modeldefinitions = []
+        self._modeldefinitions = []                
 
     def __createtable__(self, modeldefinition:dict) -> bool:
 
@@ -314,8 +310,7 @@ class StorageTableContext():
             return False
         pass
 
-    @get_modeldefinition()
-    def register_model(self, storagemodel:object, modeldefinition = None):
+    def register_model(self, storagemodel:object):
         """ set up an Tableservice for an StorageTableModel in your  Azure Storage Account
             Will create the Table if not exist!
         
@@ -323,6 +318,9 @@ class StorageTableContext():
             - storagemodel: StorageTableModel(Object)
 
         """
+
+        modeldefinition = self.getmodeldefinition(storagemodel, False)
+
         if modeldefinition is None:
 
             """ test if queuename already exists """
@@ -370,8 +368,7 @@ class StorageTableContext():
         else:
             log.info('model {} already registered. Models are {!s}.'.format(modeldefinition['modelname'], [model['modelname'] for model in self._modeldefinitions]))
 
-    @get_modeldefinition(REQUIRED)
-    def unregister_model(self, storagemodel:object, modeldefinition = None, delete_table=False):
+    def unregister_model(self, storagemodel:object, delete_table=False):
         """ clear up an Tableservice for an StorageTableModel in your  Azure Storage Account
             Will delete the Table if delete_table Flag is True!
         
@@ -383,19 +380,24 @@ class StorageTableContext():
 
         """
         
-        """ remove from modeldefinitions """
+        # get modeldefinition
+        modeldefinition = self.getmodeldefinition(storagemodel, True)
+
+        # remove from modeldefinitions
         for i in range(len(self._modeldefinitions)):
             if self._modeldefinitions[i]['modelname'] == modeldefinition['modelname']:
                 del self._modeldefinitions[i]
                 break
         
-        """ delete table from storage if delete_table == True """        
+        # delete table from storage if delete_table == True        
         if delete_table:
             self.__deletetable__(modeldefinition)
         pass
 
-    @get_modeldefinition(REQUIRED)
-    def exists(self, storagemodel, modeldefinition) -> bool:
+    # methods
+    def exists(self, storagemodel) -> bool:
+        
+        modeldefinition = self.getmodeldefinition(storagemodel, True)
         exists = False
         if storagemodel._exists is None:
             try:
@@ -417,10 +419,13 @@ class StorageTableContext():
                         
         return exists       
 
-    @get_modeldefinition(REQUIRED)
-    def get(self, storagemodel, modeldefinition) -> StorageTableModel:
+    def get(self, storagemodel) -> StorageTableModel:
         """ load entity data from storage to vars in self """
+
+        modeldefinition = self.getmodeldefinition(storagemodel, True)
+
         try:
+
             pk = storagemodel.getPartitionKey()
             rk = storagemodel.getRowKey()
 
@@ -445,10 +450,12 @@ class StorageTableContext():
         finally:
             return storagemodel
 
-    @get_modeldefinition(REQUIRED)
-    def insert(self, storagemodel, modeldefinition) -> StorageTableModel:
+    def insert(self, storagemodel) -> StorageTableModel:
         """ insert model into storage """
-        try:            
+
+        modeldefinition = self.getmodeldefinition(storagemodel, True)
+
+        try:
             modeldefinition['tableservice'].insert_or_replace_entity(modeldefinition['tablename'], storagemodel.entity())
             storagemodel._exists = True
 
@@ -464,11 +471,11 @@ class StorageTableContext():
         finally:
             return storagemodel
 
-    @get_modeldefinition(REQUIRED)
-    def merge(self, storagemodel, modeldefinition) -> StorageTableModel:
+    def merge(self, storagemodel) -> StorageTableModel:
         """ try to merge entry """
+        modeldefinition = self.getmodeldefinition(storagemodel, True)
+       
         try:
-
             pk = storagemodel.getPartitionKey()
             rk = storagemodel.getRowKey()
             entity = modeldefinition['tableservice'].get_entity(modeldefinition['tablename'], pk, rk)
@@ -497,9 +504,10 @@ class StorageTableContext():
         finally:
             return storagemodel
 
-    @get_modeldefinition(REQUIRED)
-    def delete(self,storagemodel, modeldefinition):
+    def delete(self,storagemodel):
         """ delete existing Entity """
+            
+        modeldefinition = self.getmodeldefinition(storagemodel, True)
 
         pk = storagemodel.getPartitionKey()
         rk = storagemodel.getRowKey()
@@ -514,9 +522,12 @@ class StorageTableContext():
         finally:
             return storagemodel
 
-    @get_modeldefinition(REQUIRED)
-    def query(self, storagequery, modeldefinition) -> StorageTableQuery:
+    def query(self, storagequery) -> StorageTableQuery:
+
+        modeldefinition = self.getmodeldefinition(storagequery, True)
+        
         try:
+            
             if (not storagequery._select is None) and (storagequery._select != ''):
                 storagequery.extend(modeldefinition['tableservice'].query_entities(modeldefinition['tablename'],filter=storagequery._queryfilter, select=storagequery._select))
             else:

@@ -24,7 +24,7 @@ class NameConventionError(AzureStorageWrapException):
 class ModelNotRegisteredError(AzureStorageWrapException):
     """If the Model is not registered"""
     def __init__(self, storagemodel=None):
-        msg = 'Please register Model {!s} before useing it'.format(storagemodel)
+        msg = 'Please register Model {!s} before using it'.format(storagemodel)
         super(ModelNotRegisteredError, self).__init__(storagemodel, msg)
 
 class ModelRegisteredMoreThanOnceError(AzureStorageWrapException):

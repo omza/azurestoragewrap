@@ -230,23 +230,23 @@ class TestStorageTableHousekeeping(object):
 
         modeldef = TableTwo()
         db.register_model(modeldef)
-        db.unregister_model(modeldef, None, True)
+        db.unregister_model(modeldef, True)
         assert not 'TableTwo' in [model['modelname'] for model in db._modeldefinitions]
 
         modeldef = TableThree()
         db.register_model(modeldef)
-        db.unregister_model(modeldef, None, True)
+        db.unregister_model(modeldef, True)
         assert not 'TableThree' in [model['modelname'] for model in db._modeldefinitions]
 
 
         modeldef = Table4()
         db.register_model(modeldef)
-        db.unregister_model(modeldef, None, True)
+        db.unregister_model(modeldef, True)
         assert not 'Table4' in [model['modelname'] for model in db._modeldefinitions]
 
         modeldef = Table5()
         db.register_model(modeldef)
-        db.unregister_model(modeldef, None, True)
+        db.unregister_model(modeldef, True)
         assert not 'Table5' in [model['modelname'] for model in db._modeldefinitions]
 
 
